@@ -1,0 +1,87 @@
+<?php
+
+namespace Tests\Feature\Platform\Concerns;
+
+use App\Models\ComplaintCategory;
+use App\Models\District;
+use App\Models\ParentSchoolRelationship;
+use App\Models\School;
+use App\Models\SchoolStaff;
+use App\Models\State;
+use App\Models\StudentSchoolRelationship;
+use App\Models\User;
+
+trait SetsUpPlatformData
+{
+    protected function makeSchool(): School
+    {
+        $unique = strtoupper(substr(uniqid(), -6));
+        $state = State::create(['name' => 'Test State '.$unique, 'code' => 'S'.$unique]);
+        $district = District::create(['state_id' => $state->id, 'name' => 'Test District '.$unique, 'code' => 'D'.$unique]);
+
+        return School::create([
+            'school_code' => 'SCH-TEST-'.$unique,
+            'name' => 'Test Public School '.$unique,
+            'board' => 'CBSE',
+            'management_type' => 'private',
+            'state_id' => $state->id,
+            'district_id' => $district->id,
+            'address' => '123 Test Street',
+            'city' => 'Pune',
+            'pincode' => '411001',
+            'recognition_status' => 'verified',
+            'classes_from' => 'Nursery',
+            'classes_to' => 'Class 12',
+        ]);
+    }
+
+    protected function makeCategory(bool $childSafety = false): ComplaintCategory
+    {
+        return ComplaintCategory::create([
+            'name' => 'Infrastructure',
+            'slug' => 'infrastructure-'.uniqid(),
+            'is_child_safety' => $childSafety,
+            'is_active' => true,
+        ]);
+    }
+
+    protected function makeVerifiedParent(School $school): User
+    {
+        $user = User::factory()->create();
+        $user->assignRole('parent');
+
+        ParentSchoolRelationship::create([
+            'user_id' => $user->id,
+            'school_id' => $school->id,
+            'status' => 'verified',
+            'verified_at' => now(),
+        ]);
+
+        return $user;
+    }
+
+    protected function makeVerifiedStudent(School $school): User
+    {
+        $user = User::factory()->create();
+        $user->assignRole('student');
+
+        StudentSchoolRelationship::create([
+            'user_id' => $user->id,
+            'school_id' => $school->id,
+            'status' => 'verified',
+            'verified_at' => now(),
+        ]);
+
+        return $user;
+    }
+
+    protected function makeSchoolAdmin(School $school): User
+    {
+        $user = User::factory()->create();
+        $user->assignRole('school_admin');
+
+        SchoolStaff::create(['user_id' => $user->id, 'school_id' => $school->id, 'designation' => 'Principal']);
+
+        return $user;
+    }
+}
