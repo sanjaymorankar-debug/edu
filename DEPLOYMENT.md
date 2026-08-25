@@ -92,6 +92,14 @@ Database migrations are additive in this build (no destructive migrations shippe
 mysqldump -u <DB_USERNAME> -p <DB_DATABASE> > backup-$(date +%Y%m%d-%H%M%S).sql
 ```
 
+## Known Hostinger PHP restrictions
+
+This account's PHP has `disable_functions` including `proc_open`, `symlink`, `link`, `exec`, `shell_exec`. Consequences:
+
+- `php artisan storage:link` **fails silently-ish** (uses `symlink()`). Create the symlink from the shell instead: `ln -sfn ../edu-app/storage/app/public public_html/storage`.
+- Some Composer post-install scripts that shell out (observed once with `laravel/pail`'s discovery step) can throw a `proc_open` error mid-`composer install`. It's usually non-fatal — verify with `php artisan --version` and check `bootstrap/cache/packages.php` exists; re-run `php artisan package:discover --ansi` directly if needed.
+- Don't rely on `Process`/`Symfony\Process`-based artisan features (e.g. `artisan serve`, anything that shells out) in production — they won't work here. The app runs through Apache/PHP-FPM normally, which doesn't need any of this.
+
 ## Safety notes
 
 - `edu-app/` is outside `public_html`, so `.env`, `storage/logs`, and the SQLite dev DB (not used in prod) are never web-reachable.
