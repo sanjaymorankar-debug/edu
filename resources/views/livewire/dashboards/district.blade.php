@@ -2,12 +2,29 @@
 
 use App\Models\Complaint;
 use App\Models\OfficerJurisdiction;
+use App\Models\School;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
 new #[Layout('layouts.app')] class extends Component
 {
+    /**
+     * Every approve action re-checks the school's district_id against this
+     * officer's own jurisdiction — an officer must never be able to verify
+     * a school outside the district they were assigned.
+     */
+    public function approveSchool(int $schoolId): void
+    {
+        $districtIds = OfficerJurisdiction::where('user_id', Auth::id())
+            ->where('level', 'district')->pluck('district_id');
+
+        $school = School::findOrFail($schoolId);
+        abort_unless($districtIds->contains($school->district_id), 403);
+
+        $school->update(['recognition_status' => 'verified']);
+    }
+
     public function with(): array
     {
         $districtIds = OfficerJurisdiction::where('user_id', Auth::id())
@@ -27,7 +44,11 @@ new #[Layout('layouts.app')] class extends Component
             'unresolved' => $complaints->whereNotIn('status', ['resolved', 'closed'])->count(),
         ];
 
-        return compact('complaints', 'stats');
+        $pendingSchools = School::whereIn('district_id', $districtIds)
+            ->whereIn('recognition_status', ['pending', 'under_review'])
+            ->get();
+
+        return compact('complaints', 'stats', 'pendingSchools');
     }
 }; ?>
 
@@ -55,6 +76,18 @@ new #[Layout('layouts.app')] class extends Component
                 <div class="text-xs text-gray-500">Child-Safety Flagged</div>
             </div>
         </div>
+
+        @if ($pendingSchools->count() > 0)
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="font-semibold text-gray-900 mb-4">Pending School Registrations ({{ $pendingSchools->count() }})</h3>
+                @foreach ($pendingSchools as $school)
+                    <div class="flex justify-between items-center py-2 border-b last:border-0 text-sm">
+                        <span>{{ $school->name }} — {{ $school->city }} ({{ $school->board }})</span>
+                        <button wire:click="approveSchool({{ $school->id }})" class="text-xs px-2 py-1 bg-green-600 text-white rounded">Verify</button>
+                    </div>
+                @endforeach
+            </div>
+        @endif
 
         <div class="bg-white rounded-lg shadow p-6">
             <h3 class="font-semibold text-gray-900 mb-4">Complaints (highest severity first)</h3>

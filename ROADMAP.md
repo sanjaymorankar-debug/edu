@@ -18,6 +18,8 @@ The original spec for this platform is a multi-month, national-scale system (50+
 - **Dashboards** — Parent, School Admin, and District Officer are fully working. Student, Teacher, State Officer, National Admin, Researcher, and System Admin roles authenticate and route correctly (RBAC is fully modeled for all 10 roles) but land on a placeholder screen instead of a full dashboard.
 - **School Quality Index** — basic weighted average with a configurable-weights table and a simple response-volume confidence heuristic. No time-decay weighting, no protection against a single review moving the score disproportionately (spec section X), no historical trend charting yet (the `school_quality_scores` table stores snapshots for this, just not surfaced in UI).
 - **Admin panel** — none yet. Rating weights, complaint categories, and roles/permissions are seeded and DB-editable but have no UI; changing them today means a database update or a new seeder run.
+- **Parent-child linkage** — a parent's self-service onboarding (`/onboarding`) links them to a school but doesn't yet capture *which* specific student/child they're linked to (`parent_school_relationships.student_user_id` stays null on this path — it's only populated by the seeder). A parent can currently only have one pending/verified link per school, not one per child. Fixing this means adding a "select or invite your child's account" step to onboarding.
+- **School registration additional-staff invites** — creates the account and shows the temporary password on-screen (since `MAIL_MAILER=log`, no real email goes out in this environment). A production deployment would need real mail delivery here instead of an on-screen credential dump.
 
 ## Full doc set
 

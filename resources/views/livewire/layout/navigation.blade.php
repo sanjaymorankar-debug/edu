@@ -35,8 +35,11 @@ new class extends Component
                             {{ __('Dashboard') }}
                         </x-nav-link>
                     @endauth
-                    <x-nav-link :href="route('schools.index')" :active="request()->routeIs('schools.*')" wire:navigate>
+                    <x-nav-link :href="route('schools.index')" :active="request()->routeIs('schools.index')" wire:navigate>
                         {{ __('Find School') }}
+                    </x-nav-link>
+                    <x-nav-link :href="route('schools.register')" :active="request()->routeIs('schools.register')" wire:navigate>
+                        {{ __('Register a School') }}
                     </x-nav-link>
                 </div>
             </div>
@@ -96,8 +99,11 @@ new class extends Component
                     {{ __('Dashboard') }}
                 </x-responsive-nav-link>
             @endauth
-            <x-responsive-nav-link :href="route('schools.index')" :active="request()->routeIs('schools.*')" wire:navigate>
+            <x-responsive-nav-link :href="route('schools.index')" :active="request()->routeIs('schools.index')" wire:navigate>
                 {{ __('Find School') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('schools.register')" :active="request()->routeIs('schools.register')" wire:navigate>
+                {{ __('Register a School') }}
             </x-responsive-nav-link>
         </div>
 

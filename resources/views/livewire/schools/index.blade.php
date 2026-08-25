@@ -64,6 +64,11 @@ new #[Layout('layouts.app')] class extends Component
     </x-slot>
 
     <div class="py-8 max-w-7xl mx-auto sm:px-6 lg:px-8">
+        <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-4 mb-6 flex flex-wrap items-center justify-between gap-3">
+            <p class="text-sm text-indigo-900">Don't see your school? Register it and get verified by a District Officer.</p>
+            <a href="{{ route('schools.register') }}" wire:navigate class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 shrink-0">Register a School</a>
+        </div>
+
         <div class="bg-white p-6 rounded-lg shadow mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
                 <x-input-label for="search" value="Name, city or PIN" />

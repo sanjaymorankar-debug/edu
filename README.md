@@ -10,7 +10,10 @@ This is **Phase 1** of a much larger spec — see [`ROADMAP.md`](ROADMAP.md) for
 ## What's actually here
 
 - Auth + RBAC for 10 roles (spatie/laravel-permission)
-- School registration, public search, school profile pages
+- Public school registration (`/schools/register`) — the registrant becomes School Admin immediately; the school itself stays `pending` until a District/State Officer verifies it
+- Self-service parent/student/teacher onboarding (`/onboarding`) — link your account to a school; the link stays `pending` until the School Admin approves it
+- School Admin dashboard includes a "Pending Verifications" queue (approve/reject parent/student/teacher links); District Officer dashboard includes a "Pending School Registrations" queue
+- Public school search, school profile pages
 - Faceless complaint system with real identity anonymization (see [`SECURITY_PRIVACY.md`](SECURITY_PRIVACY.md))
 - Resolution-confirmation workflow ("was your issue *actually* resolved?")
 - Basic School Quality Index with admin-configurable weights

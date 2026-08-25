@@ -1,6 +1,8 @@
 <?php
 
+use App\Models\ParentSchoolRelationship;
 use App\Models\School;
+use App\Models\StudentSchoolRelationship;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -23,9 +25,24 @@ new #[Layout('layouts.app')] class extends Component
             ->limit(5)
             ->get();
 
-        $canSubmit = Auth::check() && Auth::user()->hasAnyRole(['parent', 'student']);
+        $user = Auth::user();
+        $isLinkable = $user && $user->hasAnyRole(['parent', 'student']);
+        $linkStatus = null;
 
-        return compact('recentComplaints', 'canSubmit');
+        if ($isLinkable) {
+            $relation = $user->hasRole('parent')
+                ? ParentSchoolRelationship::where('user_id', $user->id)->where('school_id', $this->school->id)->first()
+                : StudentSchoolRelationship::where('user_id', $user->id)->where('school_id', $this->school->id)->first();
+
+            $linkStatus = $relation?->status;
+        }
+
+        return [
+            'recentComplaints' => $recentComplaints,
+            'isLinkable' => $isLinkable,
+            'canSubmit' => $linkStatus === 'verified',
+            'linkStatus' => $linkStatus,
+        ];
     }
 }; ?>
 
@@ -64,6 +81,11 @@ new #[Layout('layouts.app')] class extends Component
                     <a href="{{ route('feedback.create', $school) }}" wire:navigate
                         class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700">Rate this School</a>
                 </div>
+            @elseif ($isLinkable && $linkStatus === 'pending')
+                <p class="mt-4 text-sm text-yellow-700">Your link to this school is awaiting approval from the school admin.</p>
+            @elseif ($isLinkable && $linkStatus === null)
+                <a href="{{ route('onboarding') }}?school={{ $school->id }}" wire:navigate
+                    class="mt-4 inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700">Link this school to my account</a>
             @endif
         </div>
 

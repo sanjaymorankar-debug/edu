@@ -51,7 +51,9 @@ new #[Layout('layouts.guest')] class extends Component
 
         Auth::login($user);
 
-        $this->redirect(route('dashboard', absolute: false), navigate: true);
+        // Parent/student/teacher accounts aren't useful yet until they're
+        // linked to a school — send them straight into that flow.
+        $this->redirect(route('onboarding', absolute: false), navigate: true);
     }
 }; ?>
 
@@ -66,6 +68,11 @@ new #[Layout('layouts.guest')] class extends Component
                 <option value="teacher">Teacher</option>
             </select>
             <x-input-error :messages="$errors->get('role')" class="mt-2" />
+            <p class="text-xs text-gray-500 mt-1">
+                Registering a school instead?
+                <a href="{{ route('schools.register') }}" wire:navigate class="underline">Register your school here</a>
+                — School Admin and government accounts aren't created through this form.
+            </p>
         </div>
 
         <!-- Name -->

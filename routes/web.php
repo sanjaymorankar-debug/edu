@@ -7,6 +7,7 @@ use Livewire\Volt\Volt;
 
 Volt::route('/', 'schools.index')->name('home');
 Volt::route('schools', 'schools.index')->name('schools.index');
+Volt::route('schools/register', 'schools.register')->name('schools.register');
 Volt::route('schools/{school}', 'schools.show')->name('schools.show');
 
 Route::get('dashboard', DashboardController::class)
@@ -18,6 +19,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Volt::route('dashboard/school', 'dashboards.school')->name('dashboard.school')->middleware('role:school_admin');
     Volt::route('dashboard/district', 'dashboards.district')->name('dashboard.district')->middleware('role:district_officer');
     Volt::route('dashboard/placeholder', 'dashboards.placeholder')->name('dashboard.placeholder');
+
+    Volt::route('onboarding', 'onboarding.index')->name('onboarding')->middleware('role:parent|student|teacher');
 
     Volt::route('complaints/create', 'complaints.create')->name('complaints.create')->middleware('role:parent|student');
     Volt::route('complaints/{complaint}', 'complaints.show')->name('complaints.show');
