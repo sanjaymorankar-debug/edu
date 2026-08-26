@@ -6,6 +6,7 @@ use App\Models\ComplaintEvidence;
 use App\Models\ParentSchoolRelationship;
 use App\Models\School;
 use App\Models\StudentSchoolRelationship;
+use App\Services\AIAssistService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -24,9 +25,47 @@ new #[Layout('layouts.app')] class extends Component
     public string $severity = 'medium';
     public $evidenceFile = null;
 
+    public ?int $suggestedCategoryId = null;
+    public ?string $suggestedCategoryName = null;
+    public ?int $possibleDuplicateId = null;
+    public ?string $possibleDuplicateNumber = null;
+
     public function mount(): void
     {
         $this->schoolId = (string) request()->query('school', '');
+    }
+
+    /**
+     * Advisory only (spec section AF) — never auto-applied. The submitter
+     * sees a suggestion and a "use this" button; nothing changes without
+     * them clicking it.
+     */
+    public function updatedDescription(): void
+    {
+        if (mb_strlen($this->description) < 20 || $this->schoolId === '') {
+            $this->suggestedCategoryId = null;
+            $this->possibleDuplicateId = null;
+
+            return;
+        }
+
+        $ai = app(AIAssistService::class);
+
+        $suggested = $ai->suggestCategory($this->subject, $this->description);
+        $this->suggestedCategoryId = $suggested?->id;
+        $this->suggestedCategoryName = $suggested?->name;
+
+        $school = School::find($this->schoolId);
+        $duplicate = $school ? $ai->findPossibleDuplicate($school, $this->description) : null;
+        $this->possibleDuplicateId = $duplicate?->id;
+        $this->possibleDuplicateNumber = $duplicate?->complaint_number;
+    }
+
+    public function applySuggestedCategory(): void
+    {
+        if ($this->suggestedCategoryId) {
+            $this->complaintCategoryId = (string) $this->suggestedCategoryId;
+        }
     }
 
     /**
@@ -151,6 +190,12 @@ new #[Layout('layouts.app')] class extends Component
                         @endforeach
                     </select>
                     <x-input-error :messages="$errors->get('complaintCategoryId')" class="mt-2" />
+                    @if ($suggestedCategoryId && (string) $suggestedCategoryId !== $complaintCategoryId)
+                        <p class="text-xs text-indigo-600 mt-1">
+                            Based on your description, this might be "{{ $suggestedCategoryName }}" —
+                            <button type="button" wire:click="applySuggestedCategory" class="underline">use this</button>
+                        </p>
+                    @endif
                 </div>
 
                 <div>
@@ -161,8 +206,15 @@ new #[Layout('layouts.app')] class extends Component
 
                 <div>
                     <x-input-label for="description" value="Description" />
-                    <textarea wire:model="description" id="description" rows="5" class="border-gray-300 rounded-md shadow-sm mt-1 w-full"></textarea>
+                    <textarea wire:model.blur="description" id="description" rows="5" class="border-gray-300 rounded-md shadow-sm mt-1 w-full"></textarea>
                     <x-input-error :messages="$errors->get('description')" class="mt-2" />
+                    @if ($possibleDuplicateId)
+                        <p class="text-xs text-yellow-700 bg-yellow-50 rounded p-2 mt-2">
+                            This looks similar to complaint {{ $possibleDuplicateNumber }}, submitted recently for this
+                            school. You can still submit — this is just a heads-up, not a block.
+                            <a href="{{ route('complaints.show', $possibleDuplicateId) }}" wire:navigate class="underline">View it</a>
+                        </p>
+                    @endif
                 </div>
 
                 <div>

@@ -4,11 +4,13 @@ namespace Tests\Feature\Platform\Concerns;
 
 use App\Models\ComplaintCategory;
 use App\Models\District;
+use App\Models\OfficerJurisdiction;
 use App\Models\ParentSchoolRelationship;
 use App\Models\School;
 use App\Models\SchoolStaff;
 use App\Models\State;
 use App\Models\StudentSchoolRelationship;
+use App\Models\TeacherSchoolRelationship;
 use App\Models\User;
 
 trait SetsUpPlatformData
@@ -81,6 +83,31 @@ trait SetsUpPlatformData
         $user->assignRole('school_admin');
 
         SchoolStaff::create(['user_id' => $user->id, 'school_id' => $school->id, 'designation' => 'Principal']);
+
+        return $user;
+    }
+
+    protected function makeVerifiedTeacher(School $school): User
+    {
+        $user = User::factory()->create();
+        $user->assignRole('teacher');
+
+        TeacherSchoolRelationship::create([
+            'user_id' => $user->id,
+            'school_id' => $school->id,
+            'status' => 'verified',
+            'verified_at' => now(),
+        ]);
+
+        return $user;
+    }
+
+    protected function makeDistrictOfficer(School $school): User
+    {
+        $user = User::factory()->create();
+        $user->assignRole('district_officer');
+
+        OfficerJurisdiction::create(['user_id' => $user->id, 'level' => 'district', 'district_id' => $school->district_id]);
 
         return $user;
     }

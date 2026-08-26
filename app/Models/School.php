@@ -69,4 +69,23 @@ class School extends Model
     {
         return $this->hasMany(TeacherSchoolRelationship::class);
     }
+
+    public function teacherFeedback(): HasMany
+    {
+        return $this->hasMany(TeacherFeedback::class);
+    }
+
+    public function retaliationReports(): HasMany
+    {
+        return $this->hasMany(RetaliationReport::class);
+    }
+
+    /**
+     * Teachers verified at this school — used to populate "rate this
+     * teacher" pickers on the school profile page.
+     */
+    public function verifiedTeachers()
+    {
+        return User::whereIn('id', $this->teacherRelationships()->where('status', 'verified')->pluck('user_id'));
+    }
 }

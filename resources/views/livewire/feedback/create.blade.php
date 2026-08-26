@@ -19,8 +19,8 @@ new #[Layout('layouts.app')] class extends Component
     public function mount(School $school): void
     {
         $this->school = $school;
-        foreach (SchoolRatingComponent::where('is_active', true)->get() as $component) {
-            $this->scores[$component->key] = 3;
+        foreach (SchoolRatingComponent::where('is_active', true)->get() as $dimension) {
+            $this->scores[$dimension->key] = 3;
         }
     }
 
@@ -78,13 +78,13 @@ new #[Layout('layouts.app')] class extends Component
             <p class="text-sm text-gray-500 mb-6">Your rating is submitted anonymously and only counted into the school's aggregate score.</p>
 
             <form wire:submit="submit" class="space-y-4">
-                @foreach ($components as $component)
+                @foreach ($components as $dimension)
                     <div>
                         <div class="flex justify-between text-sm">
-                            <x-input-label :value="$component->label" />
-                            <span>{{ $scores[$component->key] }} / 5</span>
+                            <x-input-label :value="$dimension->label" />
+                            <span>{{ $scores[$dimension->key] }} / 5</span>
                         </div>
-                        <input type="range" min="1" max="5" wire:model="scores.{{ $component->key }}" class="w-full" />
+                        <input type="range" min="1" max="5" wire:model="scores.{{ $dimension->key }}" class="w-full" />
                     </div>
                 @endforeach
 

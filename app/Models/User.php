@@ -58,6 +58,16 @@ class User extends Authenticatable
         return $this->hasMany(AnonymousIdentity::class);
     }
 
+    public function receivedTeacherFeedback(): HasMany
+    {
+        return $this->hasMany(TeacherFeedback::class, 'teacher_user_id');
+    }
+
+    public function effectivenessScores(): HasMany
+    {
+        return $this->hasMany(TeacherEffectivenessScore::class, 'teacher_user_id');
+    }
+
     /**
      * Stable per-school pseudonym for this user, created on first use.
      * This is the only bridge between a real identity and the anonymized

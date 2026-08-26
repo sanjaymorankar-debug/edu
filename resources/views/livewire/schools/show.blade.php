@@ -25,6 +25,8 @@ new #[Layout('layouts.app')] class extends Component
             ->limit(5)
             ->get();
 
+        $verifiedTeachers = $this->school->verifiedTeachers()->get(['id', 'name']);
+
         $user = Auth::user();
         $isLinkable = $user && $user->hasAnyRole(['parent', 'student']);
         $linkStatus = null;
@@ -39,6 +41,7 @@ new #[Layout('layouts.app')] class extends Component
 
         return [
             'recentComplaints' => $recentComplaints,
+            'verifiedTeachers' => $verifiedTeachers,
             'isLinkable' => $isLinkable,
             'canSubmit' => $linkStatus === 'verified',
             'linkStatus' => $linkStatus,
@@ -103,6 +106,19 @@ new #[Layout('layouts.app')] class extends Component
                         <h4 class="text-sm font-medium text-gray-700">Sports</h4>
                         <p class="text-sm text-gray-500">{{ implode(', ', $school->profile->sports ?? []) }}</p>
                     </div>
+                </div>
+            </div>
+        @endif
+
+        @if ($canSubmit && $verifiedTeachers->isNotEmpty())
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="font-semibold text-gray-900 mb-2">Rate a Teacher</h3>
+                <p class="text-xs text-gray-400 mb-3">Private and anonymous — feeds only that teacher's own effectiveness index.</p>
+                <div class="flex flex-wrap gap-2">
+                    @foreach ($verifiedTeachers as $teacher)
+                        <a href="{{ route('teacher-feedback.create', $teacher) }}" wire:navigate
+                            class="text-sm px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-md text-gray-700">{{ $teacher->name }}</a>
+                    @endforeach
                 </div>
             </div>
         @endif

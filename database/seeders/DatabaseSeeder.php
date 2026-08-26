@@ -21,10 +21,13 @@ class DatabaseSeeder extends Seeder
                 LocationSeeder::class,
                 ComplaintCategorySeeder::class,
                 SchoolRatingComponentSeeder::class,
+                TeacherRatingComponentSeeder::class,
                 SchoolSeeder::class,
                 UserSeeder::class,
                 ComplaintSeeder::class,
                 FeedbackSeeder::class,
+                TeacherFeedbackSeeder::class,
+                RetaliationReportSeeder::class,
             ]);
         });
     }
