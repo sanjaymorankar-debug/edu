@@ -10,6 +10,10 @@ Volt::route('schools', 'schools.index')->name('schools.index');
 Volt::route('schools/register', 'schools.register')->name('schools.register');
 Volt::route('schools/{school}', 'schools.show')->name('schools.show');
 
+// Accessible to guests and authenticated users alike — an invitation link
+// is often the recipient's very first visit to the site.
+Volt::route('invitations/{token}', 'invitations.show')->name('invitations.show');
+
 Route::get('dashboard', DashboardController::class)
     ->middleware(['auth', 'verified'])
     ->name('dashboard');

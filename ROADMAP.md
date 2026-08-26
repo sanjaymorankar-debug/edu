@@ -19,8 +19,13 @@ The original spec for this platform is a multi-month, national-scale system (50+
   - Student dashboard reuses the Parent dashboard's visual language rather than a dedicated age-appropriate design pass (simplified language, safety-resource links) — still on the list if this becomes a priority.
   - State/National/Researcher dashboards are live-query rollups (see above) — correct today, not how it would scale to spec's target school count.
 - **Admin panel** — covers rating weights (school + teacher) and complaint categories, plus an audit-log/identity-access-log viewer. Does **not** yet cover role/permission management, notification templates, or moderation-rule configuration (all still DB/seeder-only).
-- **Parent-child linkage** — a parent's self-service onboarding (`/onboarding`) links them to a school but doesn't yet capture *which* specific student/child they're linked to (`parent_school_relationships.student_user_id` stays null on this path — it's only populated by the seeder). A parent can currently only have one pending/verified link per school, not one per child.
-- **School registration additional-staff invites** — creates the account and shows the temporary password on-screen (since `MAIL_MAILER=log`, no real email goes out in this environment). A production deployment would need real mail delivery here instead of an on-screen credential dump.
+- **School registration additional-staff invites, and the new School Admin → Parent/Student/Teacher invite flow (`/invitations/{token}`)** — both create the account/link and show the temporary password or invite link on-screen instead of emailing it (since `MAIL_MAILER=log`, no real email goes out in this environment). A production deployment would need real mail delivery instead of an on-screen credential/link dump.
+- **AI-assisted suggestions** — category suggestion and possible-duplicate detection are wired into the complaint form as advisory hints (never auto-applied, per spec section AF). Not wired into: school registration, retaliation reports, or teacher feedback forms yet.
+
+## Closed since last update
+
+- **Parent-child linkage** — parent onboarding (`/onboarding`) now supports registering a new child account (with a generated temp password) or linking to a child's existing student account, and stores the link on `parent_school_relationships.student_user_id`. A parent can register multiple children by repeating onboarding per child.
+- **School-initiated invitations** — School Admin can invite a parent/student/teacher by email from the School Dashboard; the recipient follows a link to `/invitations/{token}`, registers or logs in, and accepts — the resulting relationship is created **verified** immediately (the invite itself is the vetting, no separate approval step). Invitations can be revoked while pending.
 - **AI-assisted suggestions** — category suggestion and possible-duplicate detection are wired into the complaint form as advisory hints (never auto-applied, per spec section AF). Not wired into: school registration, retaliation reports, or teacher feedback forms yet.
 
 ## Full doc set
@@ -29,8 +34,8 @@ Spec asked for 12 docs; this build ships 8 (`README`, `SETUP`, `DEPLOYMENT`, `DA
 
 ## Suggested next phase order
 
-1. Parent-child linkage (multiple children per parent per school) — closes a real usability gap in onboarding.
-2. Hard identity-access reason gate — closes the biggest remaining privacy/safety gap.
+1. Hard identity-access reason gate — closes the biggest remaining privacy/safety gap.
+2. Real mail delivery — replaces the on-screen credential/invite-link dumps (school registration staff invites, school-to-member invitations) with actual email.
 3. Real aggregation infrastructure for State/National/Researcher dashboards (replace live queries with scheduled rollups) — needed before this scales past a few hundred schools.
 4. Value-add component of TEI (requires academic performance data this build doesn't have).
 5. Account-level anti-manipulation detection (suspicious/coordinated accounts) — should follow, not precede, having enough real usage data to design against.
