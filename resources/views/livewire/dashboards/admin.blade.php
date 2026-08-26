@@ -50,6 +50,18 @@ new #[Layout('layouts.app')] class extends Component
                     <div class="font-medium text-gray-900">Audit Log</div>
                     <div class="text-xs text-gray-500 mt-1">Review system actions and identity-access log</div>
                 </a>
+                <a href="{{ route('admin.fraud-flags') }}" wire:navigate class="block border rounded-lg p-4 hover:bg-gray-50">
+                    <div class="font-medium text-gray-900">Fraud Flags</div>
+                    <div class="text-xs text-gray-500 mt-1">Review coordinated-review / spike signals</div>
+                </a>
+                <a href="{{ route('admin.roles') }}" wire:navigate class="block border rounded-lg p-4 hover:bg-gray-50">
+                    <div class="font-medium text-gray-900">Roles & Permissions</div>
+                    <div class="text-xs text-gray-500 mt-1">Manage role permissions and user role assignments</div>
+                </a>
+                <a href="{{ route('admin.moderation') }}" wire:navigate class="block border rounded-lg p-4 hover:bg-gray-50">
+                    <div class="font-medium text-gray-900">Moderation Settings</div>
+                    <div class="text-xs text-gray-500 mt-1">Configure coordinated-review detection thresholds</div>
+                </a>
             </div>
         </div>
     </div>

@@ -1,16 +1,30 @@
 <?php
 
+use App\Models\AnalyticsSnapshot;
 use App\Models\Complaint;
 use App\Models\District;
 use App\Models\OfficerJurisdiction;
 use App\Models\RetaliationReport;
 use App\Models\School;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
+/**
+ * Top-line stats/by-district breakdown come from the analytics_snapshots
+ * rollup (see RecalculateAnalyticsSnapshots) instead of a live aggregate
+ * query. The complaint list and retaliation queue below stay live-query —
+ * this is an officer's actionable queue, not a report, and must reflect the
+ * current record set exactly.
+ */
 new #[Layout('layouts.app')] class extends Component
 {
+    public function recalculateNow(): void
+    {
+        Artisan::call('analytics:recalculate');
+    }
+
     public function with(): array
     {
         $stateIds = OfficerJurisdiction::where('user_id', Auth::id())
@@ -23,19 +37,32 @@ new #[Layout('layouts.app')] class extends Component
             ->limit(200)
             ->get();
 
+        // Most state officers cover exactly one state, but jurisdiction supports
+        // more than one — merge each state's snapshot rather than assuming one.
+        $snapshots = $stateIds->map(function (int $stateId) {
+            $snapshot = AnalyticsSnapshot::latestForState($stateId);
+
+            if (! $snapshot) {
+                Artisan::call('analytics:recalculate');
+                $snapshot = AnalyticsSnapshot::latestForState($stateId);
+            }
+
+            return $snapshot;
+        })->filter();
+
         $stats = [
-            'total' => $complaints->count(),
-            'escalated' => $complaints->where('status', 'escalated')->count(),
-            'child_safety' => $complaints->where('is_child_safety_flag', true)->count(),
-            'unresolved' => $complaints->whereNotIn('status', ['resolved', 'closed'])->count(),
+            'total' => $snapshots->sum(fn ($s) => $s->metrics['total'] ?? 0),
+            'escalated' => $snapshots->sum(fn ($s) => $s->metrics['escalated'] ?? 0),
+            'child_safety' => $snapshots->sum(fn ($s) => $s->metrics['child_safety'] ?? 0),
+            'unresolved' => $snapshots->sum(fn ($s) => $s->metrics['unresolved'] ?? 0),
         ];
 
-        $byDistrict = $complaints->groupBy(fn ($c) => $c->district->name)
-            ->map(fn ($group) => [
-                'total' => $group->count(),
-                'unresolved' => $group->whereNotIn('status', ['resolved', 'closed'])->count(),
-            ])
+        $byDistrict = $snapshots
+            ->flatMap(fn ($s) => collect($s->metrics['by_district'] ?? []))
             ->sortByDesc(fn ($row) => $row['total']);
+
+        $pendingSchools = $snapshots->sum(fn ($s) => $s->metrics['pending_schools'] ?? 0);
+        $calculatedAt = $snapshots->max(fn ($s) => $s->calculated_at);
 
         $retaliationReports = RetaliationReport::whereIn('state_id', $stateIds)
             ->with('school:id,name')
@@ -44,11 +71,7 @@ new #[Layout('layouts.app')] class extends Component
             ->limit(20)
             ->get();
 
-        $pendingSchools = School::whereIn('state_id', $stateIds)
-            ->whereIn('recognition_status', ['pending', 'under_review'])
-            ->count();
-
-        return compact('complaints', 'stats', 'byDistrict', 'retaliationReports', 'pendingSchools');
+        return compact('complaints', 'stats', 'byDistrict', 'retaliationReports', 'pendingSchools', 'calculatedAt');
     }
 }; ?>
 
@@ -58,6 +81,14 @@ new #[Layout('layouts.app')] class extends Component
     </x-slot>
 
     <div class="py-8 max-w-6xl mx-auto sm:px-6 lg:px-8 space-y-6">
+        <div class="flex justify-between items-center text-xs text-gray-400">
+            <span>Summary figures as of {{ $calculatedAt?->diffForHumans() }}{{ $calculatedAt ? ' ('.$calculatedAt->format('M j, Y H:i').')' : '' }} — complaint list below is always live.</span>
+            <button wire:click="recalculateNow" wire:loading.attr="disabled" class="text-indigo-600 hover:underline disabled:opacity-50">
+                <span wire:loading.remove wire:target="recalculateNow">Recalculate now</span>
+                <span wire:loading wire:target="recalculateNow">Recalculating…</span>
+            </button>
+        </div>
+
         <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div class="bg-white rounded-lg shadow p-4">
                 <div class="text-2xl font-bold text-gray-900">{{ $stats['total'] }}</div>

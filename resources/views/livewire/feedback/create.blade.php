@@ -1,10 +1,13 @@
 <?php
 
+use App\Models\FraudFlag;
 use App\Models\ParentSchoolRelationship;
 use App\Models\School;
 use App\Models\SchoolFeedback;
 use App\Models\SchoolRatingComponent;
+use App\Models\Setting;
 use App\Models\StudentSchoolRelationship;
+use App\Services\AIAssistService;
 use App\Services\SchoolQualityIndexService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
@@ -58,8 +61,36 @@ new #[Layout('layouts.app')] class extends Component
         ]);
 
         app(SchoolQualityIndexService::class)->recalculate($this->school);
+        $this->flagIfSpike();
 
         $this->redirect(route('schools.show', $this->school), navigate: true);
+    }
+
+    /**
+     * Rule-based coordinated-review check (spec section AE) — runs on every
+     * submission, advisory only. Never blocks the submission itself.
+     */
+    private function flagIfSpike(): void
+    {
+        $windowMinutes = (int) Setting::get('fraud.window_minutes', 10);
+        $threshold = (int) Setting::get('fraud.threshold', 5);
+
+        $timestamps = SchoolFeedback::where('school_id', $this->school->id)
+            ->where('submitted_at', '>=', now()->subMinutes($windowMinutes * 3))
+            ->pluck('submitted_at');
+
+        $spiked = app(AIAssistService::class)->detectFeedbackSpike($timestamps, $windowMinutes, $threshold);
+
+        if ($spiked && ! FraudFlag::where('subject_type', 'school')->where('subject_id', $this->school->id)
+            ->where('flag_type', 'feedback_spike')->where('status', 'open')->exists()) {
+            FraudFlag::create([
+                'flag_type' => 'feedback_spike',
+                'subject_type' => 'school',
+                'subject_id' => $this->school->id,
+                'details' => ['window_minutes' => $windowMinutes, 'threshold' => $threshold, 'detected_at' => now()->toIso8601String()],
+                'status' => 'open',
+            ]);
+        }
     }
 
     public function with(): array

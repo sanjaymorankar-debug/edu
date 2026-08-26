@@ -1,6 +1,8 @@
 <?php
 
 use App\Livewire\Forms\LoginForm;
+use App\Models\TwoFactorAuthentication;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -10,13 +12,27 @@ new #[Layout('layouts.guest')] class extends Component
     public LoginForm $form;
 
     /**
-     * Handle an incoming authentication request.
+     * Handle an incoming authentication request. If the account has 2FA
+     * confirmed, password auth alone doesn't finish the login — we log
+     * back out immediately and hand off to the challenge page, which is
+     * the only place Auth::login() runs for real.
      */
     public function login(): void
     {
         $this->validate();
 
         $this->form->authenticate();
+
+        $user = Auth::user();
+        $hasTwoFactor = TwoFactorAuthentication::where('user_id', $user->id)->whereNotNull('confirmed_at')->exists();
+
+        if ($hasTwoFactor) {
+            Auth::logout();
+            session(['2fa_user_id' => $user->id, '2fa_remember' => $this->form->remember]);
+            $this->redirect(route('two-factor.challenge', absolute: false), navigate: true);
+
+            return;
+        }
 
         Session::regenerate();
 

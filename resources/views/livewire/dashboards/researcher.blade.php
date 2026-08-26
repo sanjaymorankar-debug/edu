@@ -1,8 +1,7 @@
 <?php
 
-use App\Models\Complaint;
-use App\Models\School;
-use App\Models\SchoolQualityScore;
+use App\Models\AnalyticsSnapshot;
+use Illuminate\Support\Facades\Artisan;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
@@ -10,33 +9,37 @@ use Livewire\Volt\Component;
  * Researcher role gets aggregate-only analytics — no individual complaint
  * browsing, no identity access. Deliberately narrower than officer
  * dashboards (spec section J: researcher is read-only, national scope).
+ *
+ * Reads the same national analytics_snapshots rollup as the National Admin
+ * dashboard (see RecalculateAnalyticsSnapshots) rather than live-querying
+ * the whole platform on every page load. No manual recalculate control here
+ * — a read-only role shouldn't trigger a platform-wide recompute.
  */
 new #[Layout('layouts.app')] class extends Component
 {
     public function with(): array
     {
-        $schoolsByBoard = School::selectRaw('board, count(*) as total')->groupBy('board')->pluck('total', 'board');
-        $schoolsByManagement = School::selectRaw('management_type, count(*) as total')->groupBy('management_type')->pluck('total', 'management_type');
+        $snapshot = AnalyticsSnapshot::latestNational();
 
-        $complaintsByCategory = Complaint::join('complaint_categories', 'complaints.complaint_category_id', '=', 'complaint_categories.id')
-            ->selectRaw('complaint_categories.name, count(*) as total')
-            ->groupBy('complaint_categories.name')
-            ->orderByDesc('total')
-            ->pluck('total', 'name');
+        if (! $snapshot) {
+            Artisan::call('analytics:recalculate');
+            $snapshot = AnalyticsSnapshot::latestNational();
+        }
 
-        $resolutionStats = [
-            'total' => Complaint::count(),
-            'resolved' => Complaint::whereIn('status', ['resolved', 'closed'])->count(),
-            'escalated' => Complaint::where('status', 'escalated')->count(),
+        $metrics = $snapshot->metrics;
+
+        return [
+            'schoolsByBoard' => collect($metrics['schools_by_board']),
+            'schoolsByManagement' => collect($metrics['schools_by_management']),
+            'complaintsByCategory' => collect($metrics['complaints_by_category']),
+            'resolutionStats' => [
+                'total' => $metrics['total_complaints'],
+                'resolved' => $metrics['total_complaints'] - $metrics['unresolved'],
+                'escalated' => $metrics['escalated'],
+            ],
+            'avgSqiByState' => collect($metrics['avg_sqi_by_state']),
+            'calculatedAt' => $snapshot->calculated_at,
         ];
-
-        $avgSqiByState = SchoolQualityScore::join('schools', 'school_quality_scores.school_id', '=', 'schools.id')
-            ->join('states', 'schools.state_id', '=', 'states.id')
-            ->selectRaw('states.name, avg(school_quality_scores.score) as avg_score, count(distinct schools.id) as school_count')
-            ->groupBy('states.name')
-            ->get();
-
-        return compact('schoolsByBoard', 'schoolsByManagement', 'complaintsByCategory', 'resolutionStats', 'avgSqiByState');
     }
 }; ?>
 
@@ -49,6 +52,8 @@ new #[Layout('layouts.app')] class extends Component
         <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-4 text-sm text-indigo-900">
             Aggregate, anonymized data only — no individual complaint detail or identity access is available to this role.
         </div>
+
+        <p class="text-xs text-gray-400">Figures as of {{ $calculatedAt?->diffForHumans() }}{{ $calculatedAt ? ' ('.$calculatedAt->format('M j, Y H:i').')' : '' }}</p>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="bg-white rounded-lg shadow p-6">
@@ -85,8 +90,8 @@ new #[Layout('layouts.app')] class extends Component
             <h3 class="font-semibold text-gray-900 mb-3">Average School Quality Index by State</h3>
             @forelse ($avgSqiByState as $row)
                 <div class="flex justify-between py-1 text-sm">
-                    <span>{{ $row->name }} ({{ $row->school_count }} schools)</span>
-                    <span class="text-gray-500">{{ round($row->avg_score, 1) }}</span>
+                    <span>{{ $row['name'] }} ({{ $row['school_count'] }} schools)</span>
+                    <span class="text-gray-500">{{ round($row['avg_score'], 1) }}</span>
                 </div>
             @empty
                 <p class="text-sm text-gray-400">No SQI data calculated yet.</p>

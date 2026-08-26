@@ -2,10 +2,14 @@
 
 namespace Tests\Feature\Platform;
 
+use App\Models\StudentAcademicRecord;
 use App\Models\TeacherEffectivenessScore;
 use App\Models\TeacherFeedback;
+use App\Models\TeacherProfile;
 use App\Models\TeacherRatingComponent;
+use App\Models\TeacherSchoolRelationship;
 use App\Models\User;
+use App\Services\TeacherEffectivenessIndexService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt;
 use Tests\Feature\Platform\Concerns\SetsUpPlatformData;
@@ -93,5 +97,43 @@ class TeacherEffectivenessTest extends TestCase
 
         $html = Volt::actingAs($teacher)->test('dashboards.teacher')->html();
         $this->assertStringContainsString('Teacher Effectiveness Index', $html);
+    }
+
+    public function test_value_add_component_blends_in_when_academic_records_show_improvement(): void
+    {
+        $this->seedComponents();
+        $school = $this->makeSchool();
+        $teacher = $this->makeVerifiedTeacher($school);
+        TeacherProfile::create(['user_id' => $teacher->id, 'subject_specialization' => 'Mathematics']);
+
+        $student = $this->makeVerifiedStudent($school);
+
+        StudentAcademicRecord::create([
+            'student_user_id' => $student->id, 'school_id' => $school->id,
+            'subject' => 'Mathematics', 'term' => '2026-T1', 'score' => 50, 'max_score' => 100,
+            'recorded_by_user_id' => $teacher->id, 'recorded_at' => now()->subMonths(2),
+        ]);
+        StudentAcademicRecord::create([
+            'student_user_id' => $student->id, 'school_id' => $school->id,
+            'subject' => 'Mathematics', 'term' => '2026-T2', 'score' => 70, 'max_score' => 100,
+            'recorded_by_user_id' => $teacher->id, 'recorded_at' => now(),
+        ]);
+
+        $score = app(TeacherEffectivenessIndexService::class)->recalculate($teacher);
+
+        $this->assertArrayHasKey('value_add', $score->component_breakdown);
+        $this->assertEquals(20.0, $score->component_breakdown['value_add']['average_improvement_pct']);
+        $this->assertSame('academic_records', $score->component_breakdown['value_add']['source']);
+    }
+
+    public function test_no_value_add_component_when_teacher_has_no_subject_specialization(): void
+    {
+        $this->seedComponents();
+        $school = $this->makeSchool();
+        $teacher = $this->makeVerifiedTeacher($school);
+
+        $score = app(TeacherEffectivenessIndexService::class)->recalculate($teacher);
+
+        $this->assertArrayNotHasKey('value_add', $score->component_breakdown);
     }
 }

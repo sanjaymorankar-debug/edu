@@ -5,6 +5,7 @@ use App\Models\ParentSchoolRelationship;
 use App\Models\RetaliationReport;
 use App\Models\School;
 use App\Models\StudentSchoolRelationship;
+use App\Services\AIAssistService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -16,10 +17,30 @@ new #[Layout('layouts.app')] class extends Component
     public string $category = '';
     public string $description = '';
 
+    public ?int $possibleDuplicateId = null;
+    public ?string $possibleDuplicateCategory = null;
+
     public function mount(): void
     {
         $this->schoolId = (string) request()->query('school', '');
         $this->complaintId = (string) request()->query('complaint', '');
+    }
+
+    /**
+     * Advisory only (spec section AF) — a heads-up, never a block.
+     */
+    public function updatedDescription(): void
+    {
+        if (mb_strlen($this->description) < 20 || $this->schoolId === '') {
+            $this->possibleDuplicateId = null;
+
+            return;
+        }
+
+        $school = School::find($this->schoolId);
+        $duplicate = $school ? app(AIAssistService::class)->findPossibleDuplicateRetaliationReport($school, $this->description) : null;
+        $this->possibleDuplicateId = $duplicate?->id;
+        $this->possibleDuplicateCategory = $duplicate ? str_replace('_', ' ', $duplicate->category) : null;
     }
 
     private function verifiedRole(School $school): ?string
@@ -139,8 +160,14 @@ new #[Layout('layouts.app')] class extends Component
 
                 <div>
                     <x-input-label for="description" value="What happened" />
-                    <textarea wire:model="description" id="description" rows="5" class="border-gray-300 rounded-md shadow-sm mt-1 w-full"></textarea>
+                    <textarea wire:model.blur="description" id="description" rows="5" class="border-gray-300 rounded-md shadow-sm mt-1 w-full"></textarea>
                     <x-input-error :messages="$errors->get('description')" class="mt-2" />
+                    @if ($possibleDuplicateId)
+                        <p class="text-xs text-yellow-700 bg-yellow-50 rounded p-2 mt-2">
+                            This looks similar to a {{ $possibleDuplicateCategory }} report already filed for this
+                            school. You can still submit — this is just a heads-up, not a block.
+                        </p>
+                    @endif
                 </div>
 
                 <x-primary-button>Submit Report</x-primary-button>

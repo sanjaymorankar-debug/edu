@@ -1,16 +1,21 @@
 <?php
 
+use App\Livewire\Concerns\SendsMailSafely;
+use App\Mail\SchoolInvitationMail;
 use App\Models\Invitation;
 use App\Models\ParentSchoolRelationship;
 use App\Models\SchoolStaff;
 use App\Models\StudentSchoolRelationship;
 use App\Models\TeacherSchoolRelationship;
+use App\Notifications\RelationshipApproved;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
 new #[Layout('layouts.app')] class extends Component
 {
+    use SendsMailSafely;
+
     public string $inviteEmail = '';
     public string $inviteRole = 'parent';
     public string $inviteStudentName = '';
@@ -44,6 +49,8 @@ new #[Layout('layouts.app')] class extends Component
         ]);
 
         $this->inviteLink = route('invitations.show', $invitation->token);
+        $this->tryMail($invitation->email, fn () => new SchoolInvitationMail($invitation->load('school'), $this->inviteLink));
+
         $this->inviteEmail = '';
         $this->inviteStudentName = '';
     }
@@ -66,7 +73,9 @@ new #[Layout('layouts.app')] class extends Component
 
     public function approveParent(int $id): void
     {
-        $this->authorizeRelationship(ParentSchoolRelationship::findOrFail($id))->update(['status' => 'verified', 'verified_at' => now()]);
+        $relationship = $this->authorizeRelationship(ParentSchoolRelationship::findOrFail($id));
+        $relationship->update(['status' => 'verified', 'verified_at' => now()]);
+        $relationship->user?->notify(new RelationshipApproved($relationship->school, 'parent'));
     }
 
     public function rejectParent(int $id): void
@@ -76,7 +85,9 @@ new #[Layout('layouts.app')] class extends Component
 
     public function approveStudent(int $id): void
     {
-        $this->authorizeRelationship(StudentSchoolRelationship::findOrFail($id))->update(['status' => 'verified', 'verified_at' => now()]);
+        $relationship = $this->authorizeRelationship(StudentSchoolRelationship::findOrFail($id));
+        $relationship->update(['status' => 'verified', 'verified_at' => now()]);
+        $relationship->user?->notify(new RelationshipApproved($relationship->school, 'student'));
     }
 
     public function rejectStudent(int $id): void
@@ -86,7 +97,9 @@ new #[Layout('layouts.app')] class extends Component
 
     public function approveTeacher(int $id): void
     {
-        $this->authorizeRelationship(TeacherSchoolRelationship::findOrFail($id))->update(['status' => 'verified', 'verified_at' => now()]);
+        $relationship = $this->authorizeRelationship(TeacherSchoolRelationship::findOrFail($id));
+        $relationship->update(['status' => 'verified', 'verified_at' => now()]);
+        $relationship->user?->notify(new RelationshipApproved($relationship->school, 'teacher'));
     }
 
     public function rejectTeacher(int $id): void

@@ -17,9 +17,15 @@ This is a large spec built incrementally — see [`ROADMAP.md`](ROADMAP.md) for 
 - Faceless complaint system with real identity anonymization (see [`SECURITY_PRIVACY.md`](SECURITY_PRIVACY.md))
 - Resolution-confirmation workflow ("was your issue *actually* resolved?")
 - Retaliation reporting — a separate, prioritized-review workflow for parents/students who face retaliation after a complaint
-- School Quality Index and Teacher Effectiveness Index, both with admin-configurable weights (Teacher scores are private to the teacher — never public, never shown to the school)
-- Admin panel: rating weights, complaint categories, audit log + identity-access log viewer
-- Advisory AI-assist (rule-based, no model configured yet) on the complaint form: category suggestion and possible-duplicate detection — never auto-applied, always overridable
+- School Quality Index and Teacher Effectiveness Index, both with admin-configurable weights (Teacher scores are private to the teacher — never public, never shown to the school); TEI blends in an approximate value-add component from admin-entered `student_academic_records`
+- Formal appeals workflow — one appeal per resolved/escalated complaint, reviewed by a State Officer one level above whoever handled the original complaint
+- Two-factor authentication (TOTP) for School Admin and officer/admin roles, with a real login challenge and single-use recovery codes
+- Real notifications system — relationship approvals, complaint status changes, invitation acceptance, and appeal decisions all notify the relevant user, with an unread-count bell in the nav
+- Admin panel: rating weights, complaint categories, audit log + identity-access log viewer, fraud-flag review queue, role/permission management, moderation-threshold configuration
+- Anti-manipulation flagging — a coordinated-feedback-burst heuristic wired into a real review queue, admin-configurable thresholds
+- Analytics-snapshot infrastructure for the National/Researcher dashboards and the State Officer dashboard's summary numbers — scheduled recalculation instead of a live query on every page load
+- Advisory AI-assist (rule-based, no model configured yet): category suggestion and possible-duplicate detection on the complaint form, possible-duplicate detection on the retaliation and school-registration forms — never auto-applied, always overridable
+- A hard reason-required gate before any officer can reverse an anonymized identity, with mandatory audit logging
 - Full audit logging + identity-access logging
 
 ## Quick start (local dev)

@@ -1,41 +1,48 @@
 <?php
 
-use App\Models\Complaint;
-use App\Models\RetaliationReport;
-use App\Models\School;
-use App\Models\State;
+use App\Models\AnalyticsSnapshot;
+use Illuminate\Support\Facades\Artisan;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
+/**
+ * Reads from the analytics_snapshots rollup (see RecalculateAnalyticsSnapshots
+ * and the hourly schedule in routes/console.php) instead of live-querying the
+ * whole platform on every page load. Falls back to computing + saving a fresh
+ * snapshot on the spot if none exists yet (first run, or before cron is wired
+ * up on the host) so the dashboard is never empty.
+ */
 new #[Layout('layouts.app')] class extends Component
 {
+    public function recalculateNow(): void
+    {
+        Artisan::call('analytics:recalculate');
+    }
+
     public function with(): array
     {
-        $complaints = Complaint::with(['school:id,name,state_id', 'state:id,name'])
-            ->orderByRaw("CASE severity WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END")
-            ->latest()
-            ->limit(500)
-            ->get();
+        $snapshot = AnalyticsSnapshot::latestNational();
 
-        $stats = [
-            'total_schools' => School::count(),
-            'verified_schools' => School::where('recognition_status', 'verified')->count(),
-            'total_complaints' => $complaints->count(),
-            'unresolved' => $complaints->whereNotIn('status', ['resolved', 'closed'])->count(),
-            'escalated' => $complaints->where('status', 'escalated')->count(),
-            'child_safety' => $complaints->where('is_child_safety_flag', true)->count(),
+        if (! $snapshot) {
+            Artisan::call('analytics:recalculate');
+            $snapshot = AnalyticsSnapshot::latestNational();
+        }
+
+        $metrics = $snapshot->metrics;
+
+        return [
+            'stats' => [
+                'total_schools' => $metrics['total_schools'],
+                'verified_schools' => $metrics['verified_schools'],
+                'total_complaints' => $metrics['total_complaints'],
+                'unresolved' => $metrics['unresolved'],
+                'escalated' => $metrics['escalated'],
+                'child_safety' => $metrics['child_safety'],
+            ],
+            'byState' => collect($metrics['by_state']),
+            'openRetaliation' => $metrics['open_retaliation'],
+            'calculatedAt' => $snapshot->calculated_at,
         ];
-
-        $byState = $complaints->groupBy(fn ($c) => $c->state->name ?? 'Unknown')
-            ->map(fn ($group) => [
-                'total' => $group->count(),
-                'unresolved' => $group->whereNotIn('status', ['resolved', 'closed'])->count(),
-            ])
-            ->sortByDesc(fn ($row) => $row['total']);
-
-        $openRetaliation = RetaliationReport::whereNotIn('status', ['resolved', 'closed'])->count();
-
-        return compact('stats', 'byState', 'openRetaliation');
     }
 }; ?>
 
@@ -45,6 +52,14 @@ new #[Layout('layouts.app')] class extends Component
     </x-slot>
 
     <div class="py-8 max-w-6xl mx-auto sm:px-6 lg:px-8 space-y-6">
+        <div class="flex justify-between items-center text-xs text-gray-400">
+            <span>Figures as of {{ $calculatedAt?->diffForHumans() }}{{ $calculatedAt ? ' ('.$calculatedAt->format('M j, Y H:i').')' : '' }}</span>
+            <button wire:click="recalculateNow" wire:loading.attr="disabled" class="text-indigo-600 hover:underline disabled:opacity-50">
+                <span wire:loading.remove wire:target="recalculateNow">Recalculate now</span>
+                <span wire:loading wire:target="recalculateNow">Recalculating…</span>
+            </button>
+        </div>
+
         <div class="grid grid-cols-2 md:grid-cols-6 gap-4">
             <div class="bg-white rounded-lg shadow p-4">
                 <div class="text-2xl font-bold text-gray-900">{{ $stats['total_schools'] }}</div>

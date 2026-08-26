@@ -1,10 +1,13 @@
 <?php
 
+use App\Livewire\Concerns\SendsMailSafely;
+use App\Mail\StaffCredentialsMail;
 use App\Models\District;
 use App\Models\School;
 use App\Models\SchoolStaff;
 use App\Models\State;
 use App\Models\User;
+use App\Services\AIAssistService;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -15,6 +18,8 @@ use Livewire\Volt\Component;
 
 new #[Layout('layouts.app')] class extends Component
 {
+    use SendsMailSafely;
+
     // Admin account fields — only used if the visitor isn't already logged in.
     public string $adminName = '';
     public string $adminEmail = '';
@@ -39,9 +44,23 @@ new #[Layout('layouts.app')] class extends Component
     public bool $submitted = false;
     public array $generatedCredentials = [];
 
+    public ?int $possibleDuplicateSchoolId = null;
+    public ?string $possibleDuplicateSchoolName = null;
+
     public function mount(): void
     {
         $this->addStaffRow();
+    }
+
+    /**
+     * Advisory only (spec section AF) — warns, never blocks, a registrant
+     * whose school name/city closely matches one already on the platform.
+     */
+    public function checkDuplicateSchool(): void
+    {
+        $duplicate = app(AIAssistService::class)->findPossibleDuplicateSchool($this->name, $this->city);
+        $this->possibleDuplicateSchoolId = $duplicate?->id;
+        $this->possibleDuplicateSchoolName = $duplicate?->name;
     }
 
     public function addStaffRow(): void
@@ -156,6 +175,8 @@ new #[Layout('layouts.app')] class extends Component
                 'email' => $staff['email'],
                 'password' => $tempPassword,
             ];
+
+            $this->tryMail($staff['email'], fn () => new StaffCredentialsMail($staff['name'], $school->name, $tempPassword));
         }
 
         if (! Auth::check()) {
@@ -256,8 +277,14 @@ new #[Layout('layouts.app')] class extends Component
                         <div class="space-y-4">
                             <div>
                                 <x-input-label for="name" value="School name" />
-                                <x-text-input wire:model="name" id="name" class="mt-1 w-full" />
+                                <x-text-input wire:model.blur="name" wire:blur="checkDuplicateSchool" id="name" class="mt-1 w-full" />
                                 <x-input-error :messages="$errors->get('name')" class="mt-2" />
+                                @if ($possibleDuplicateSchoolId)
+                                    <p class="text-xs text-yellow-700 bg-yellow-50 rounded p-2 mt-2">
+                                        "{{ $possibleDuplicateSchoolName }}" is already registered in this city. You can still
+                                        continue — this is just a heads-up to avoid accidental duplicate registrations.
+                                    </p>
+                                @endif
                             </div>
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
@@ -310,7 +337,7 @@ new #[Layout('layouts.app')] class extends Component
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <x-input-label for="city" value="City" />
-                                    <x-text-input wire:model="city" id="city" class="mt-1 w-full" />
+                                    <x-text-input wire:model.blur="city" wire:blur="checkDuplicateSchool" id="city" class="mt-1 w-full" />
                                     <x-input-error :messages="$errors->get('city')" class="mt-2" />
                                 </div>
                                 <div>

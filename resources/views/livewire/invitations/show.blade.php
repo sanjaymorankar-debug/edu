@@ -5,6 +5,7 @@ use App\Models\ParentSchoolRelationship;
 use App\Models\StudentSchoolRelationship;
 use App\Models\TeacherSchoolRelationship;
 use App\Models\User;
+use App\Notifications\InvitationAccepted;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -83,6 +84,8 @@ new #[Layout('layouts.guest')] class extends Component
             'accepted_by_user_id' => $user->id,
             'accepted_at' => now(),
         ]);
+
+        $this->invitation->invitedBy?->notify(new InvitationAccepted($this->invitation, $user));
 
         $this->accepted = true;
     }

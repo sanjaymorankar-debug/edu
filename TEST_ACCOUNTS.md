@@ -24,6 +24,8 @@ This is a test environment. All accounts and data are fabricated — do not reus
 
 Every role now has a real dashboard — nothing left on the placeholder screen. See `ROADMAP.md` for what's still simplified within each.
 
+None of the seeded accounts have 2FA enabled by default — enable it yourself from Profile → "Two-Factor Authentication" → Manage (available to School Admin and the four officer/admin roles) to test that flow. Use `admin@test.agtci.com` for `/admin/fraud-flags`, `/admin/roles`, and `/admin/moderation`.
+
 Plus ~275 additional synthetic parent/student/teacher/school-admin accounts from the seeder — all share the same demo password, all have randomly generated `@example.com`-style emails from Faker. Query the database directly if you need to find one for a specific school/district.
 
 ## Regenerating this data

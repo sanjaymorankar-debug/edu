@@ -3,15 +3,18 @@
 namespace Tests\Feature\Platform;
 
 use App\Models\ComplaintCategory;
+use App\Models\FraudFlag;
 use App\Models\SchoolRatingComponent;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt;
+use Tests\Feature\Platform\Concerns\SetsUpPlatformData;
 use Tests\TestCase;
 
 class AdminPanelTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, SetsUpPlatformData;
 
     private function makeSystemAdmin(): User
     {
@@ -70,5 +73,70 @@ class AdminPanelTest extends TestCase
             'user_id' => $admin->id,
             'action' => 'complaint-category-created',
         ]);
+    }
+
+    public function test_system_admin_can_review_a_fraud_flag(): void
+    {
+        $admin = $this->makeSystemAdmin();
+        $school = $this->makeSchool();
+        $flag = FraudFlag::create([
+            'flag_type' => 'feedback_spike',
+            'subject_type' => 'school',
+            'subject_id' => $school->id,
+            'details' => ['window_minutes' => 10, 'threshold' => 5],
+            'status' => 'open',
+        ]);
+
+        Volt::actingAs($admin)->test('admin.fraud-flags')
+            ->assertOk()
+            ->call('setStatus', $flag->id, 'dismissed');
+
+        $flag->refresh();
+        $this->assertSame('dismissed', $flag->status);
+        $this->assertSame($admin->id, $flag->reviewed_by_user_id);
+        $this->assertNotNull($flag->reviewed_at);
+    }
+
+    public function test_system_admin_can_update_moderation_thresholds(): void
+    {
+        $admin = $this->makeSystemAdmin();
+
+        Volt::actingAs($admin)->test('admin.moderation')
+            ->assertOk()
+            ->set('windowMinutes', 15)
+            ->set('threshold', 8)
+            ->call('save');
+
+        $this->assertEquals(15, Setting::get('fraud.window_minutes'));
+        $this->assertEquals(8, Setting::get('fraud.threshold'));
+    }
+
+    public function test_system_admin_can_toggle_a_role_permission(): void
+    {
+        $admin = $this->makeSystemAdmin();
+
+        Volt::actingAs($admin)->test('admin.roles')
+            ->assertOk()
+            ->call('togglePermission', 'researcher', 'view-audit-logs');
+
+        $this->assertTrue(\Spatie\Permission\Models\Role::findByName('researcher')->hasPermissionTo('view-audit-logs'));
+    }
+
+    public function test_system_admin_can_assign_and_remove_a_users_role(): void
+    {
+        $admin = $this->makeSystemAdmin();
+        $user = User::factory()->create(['email' => 'target-user@example.com']);
+        $user->assignRole('parent');
+
+        $component = Volt::actingAs($admin)->test('admin.roles')
+            ->set('userSearch', 'target-user@example.com')
+            ->call('searchUser')
+            ->set('roleToAssign', 'researcher')
+            ->call('assignRole');
+
+        $this->assertTrue($user->fresh()->hasRole('researcher'));
+
+        $component->call('removeRole', 'researcher');
+        $this->assertFalse($user->fresh()->hasRole('researcher'));
     }
 }

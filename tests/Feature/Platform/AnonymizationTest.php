@@ -68,7 +68,26 @@ class AnonymizationTest extends TestCase
         $this->actingAs($schoolAdmin);
 
         $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
-        app(IdentityResolutionService::class)->resolve($ref, 'test-resolve');
+        app(IdentityResolutionService::class)->resolve($ref, 'test-resolve', 'test reason');
+    }
+
+    public function test_identity_resolution_requires_a_non_empty_reason(): void
+    {
+        $school = $this->makeSchool();
+        $parent = $this->makeVerifiedParent($school);
+        $ref = $parent->anonymousRefFor($school, 'parent');
+
+        $officer = User::factory()->create();
+        $officer->assignRole('district_officer');
+        \App\Models\OfficerJurisdiction::create([
+            'user_id' => $officer->id, 'level' => 'district', 'district_id' => $school->district_id,
+        ]);
+        $this->actingAs($officer);
+
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        app(IdentityResolutionService::class)->resolve($ref, 'test-resolve', '   ');
+
+        $this->assertSame(0, IdentityAccessLog::count());
     }
 
     public function test_identity_resolution_by_authorized_officer_logs_access(): void

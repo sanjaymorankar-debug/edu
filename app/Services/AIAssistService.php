@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Complaint;
 use App\Models\ComplaintCategory;
+use App\Models\RetaliationReport;
 use App\Models\School;
 use Illuminate\Support\Collection;
 
@@ -76,6 +77,50 @@ class AIAssistService
     public function findPossibleDuplicate(School $school, string $description, int $lookbackDays = 14): ?Complaint
     {
         $candidates = Complaint::where('school_id', $school->id)
+            ->where('created_at', '>=', now()->subDays($lookbackDays))
+            ->get();
+
+        foreach ($candidates as $candidate) {
+            similar_text(strtolower($description), strtolower($candidate->description), $percent);
+            if ($percent >= 70.0) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Advisory check on the school-registration form: warns a registrant if
+     * a similarly-named school already exists in the same city, to catch
+     * accidental duplicate registrations before they create two School Admin
+     * accounts for the same physical school. Never blocks submission.
+     */
+    public function findPossibleDuplicateSchool(string $name, string $city): ?School
+    {
+        if (trim($name) === '' || trim($city) === '') {
+            return null;
+        }
+
+        $candidates = School::where('city', $city)->get();
+
+        foreach ($candidates as $candidate) {
+            similar_text(strtolower($name), strtolower($candidate->name), $percent);
+            if ($percent >= 80.0) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Same textual-similarity heuristic as findPossibleDuplicate(), applied
+     * to retaliation reports at the same school instead of complaints.
+     */
+    public function findPossibleDuplicateRetaliationReport(School $school, string $description, int $lookbackDays = 30): ?RetaliationReport
+    {
+        $candidates = RetaliationReport::where('school_id', $school->id)
             ->where('created_at', '>=', now()->subDays($lookbackDays))
             ->get();
 

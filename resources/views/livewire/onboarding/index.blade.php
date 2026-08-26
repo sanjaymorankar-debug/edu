@@ -1,5 +1,7 @@
 <?php
 
+use App\Livewire\Concerns\SendsMailSafely;
+use App\Mail\StaffCredentialsMail;
 use App\Models\ParentSchoolRelationship;
 use App\Models\School;
 use App\Models\StudentProfile;
@@ -14,6 +16,8 @@ use Livewire\Volt\Component;
 
 new #[Layout('layouts.app')] class extends Component
 {
+    use SendsMailSafely;
+
     public string $schoolId = '';
     public string $search = '';
 
@@ -162,6 +166,7 @@ new #[Layout('layouts.app')] class extends Component
         ]);
 
         $this->childTempPassword = $tempPassword;
+        $this->tryMail($child->email, fn () => new StaffCredentialsMail($child->name, $school->name, $tempPassword));
 
         return $child->id;
     }

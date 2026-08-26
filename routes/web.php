@@ -41,15 +41,28 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Volt::route('retaliation/report', 'retaliation.create')->name('retaliation.create')->middleware('role:parent|student');
     Volt::route('retaliation/{retaliationReport}', 'retaliation.show')->name('retaliation.show');
 
+    Volt::route('appeals/create/{complaint}', 'appeals.create')->name('appeals.create')->middleware('role:parent|student');
+    Volt::route('appeals/{appeal}', 'appeals.show')->name('appeals.show');
+
+    Volt::route('schools/{school}/academic-records', 'academic-records.index')->name('academic-records.index')->middleware('role:school_admin');
+
+    Volt::route('notifications', 'notifications.index')->name('notifications.index');
+
     Route::get('complaints/{complaint}/evidence/{evidence}', ComplaintEvidenceController::class)
         ->name('complaints.evidence.download');
 
     Route::view('profile', 'profile')->name('profile');
 
+    Volt::route('settings/two-factor', 'settings.two-factor')->name('settings.two-factor')
+        ->middleware('role:school_admin|district_officer|state_officer|national_admin|system_admin');
+
     Route::middleware('role:system_admin')->prefix('admin')->name('admin.')->group(function () {
         Volt::route('rating-weights', 'admin.rating-weights')->name('rating-weights');
         Volt::route('categories', 'admin.categories')->name('categories');
         Volt::route('audit-log', 'admin.audit-log')->name('audit-log');
+        Volt::route('fraud-flags', 'admin.fraud-flags')->name('fraud-flags');
+        Volt::route('roles', 'admin.roles')->name('roles');
+        Volt::route('moderation', 'admin.moderation')->name('moderation');
     });
 });
 

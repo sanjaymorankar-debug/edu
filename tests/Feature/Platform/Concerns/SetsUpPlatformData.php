@@ -111,4 +111,14 @@ trait SetsUpPlatformData
 
         return $user;
     }
+
+    protected function makeStateOfficer(School $school): User
+    {
+        $user = User::factory()->create();
+        $user->assignRole('state_officer');
+
+        OfficerJurisdiction::create(['user_id' => $user->id, 'level' => 'state', 'state_id' => $school->state_id]);
+
+        return $user;
+    }
 }
