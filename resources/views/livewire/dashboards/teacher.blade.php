@@ -2,6 +2,9 @@
 
 use App\Models\TeacherEffectivenessScore;
 use App\Models\TeacherSchoolRelationship;
+use App\Models\User;
+use App\Services\ConsentService;
+use App\Services\DevelopmentAccessService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -20,7 +23,18 @@ new #[Layout('layouts.app')] class extends Component
         $myEffectivenessScore = TeacherEffectivenessScore::where('teacher_user_id', $user->id)
             ->latest('calculated_at')->first();
 
-        return compact('mySchools', 'myEffectivenessScore');
+        // Only students whose guardian has switched growth tracking on appear
+        // here. A child with consent off is not listed at all — the teacher
+        // has no view of them to open, which is the point.
+        $consent = app(ConsentService::class);
+
+        $myStudents = User::whereIn('id', app(DevelopmentAccessService::class)->accessibleStudentIds($user))
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->filter(fn (User $student): bool => $consent->hasConsent($student->id, 'capability_growth'))
+            ->values();
+
+        return compact('mySchools', 'myEffectivenessScore', 'myStudents');
     }
 }; ?>
 
@@ -42,6 +56,25 @@ new #[Layout('layouts.app')] class extends Component
                 </div>
             @empty
                 <p class="text-sm text-gray-400">No linked school yet. Use "Find School" to link one.</p>
+            @endforelse
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="font-semibold text-gray-900 mb-1">Student Growth</h3>
+            <p class="text-xs text-gray-400 mb-4">
+                Students whose guardian has agreed to growth tracking. A child whose family has not
+                agreed does not appear here, and no record exists for them.
+            </p>
+            @forelse ($myStudents as $student)
+                <div class="flex items-center justify-between py-2 border-b last:border-0 text-sm">
+                    <span class="text-gray-800">{{ $student->name }}</span>
+                    <div class="flex gap-3">
+                        <a href="{{ route('growth.show', $student->id) }}" wire:navigate class="text-indigo-600 hover:underline">View</a>
+                        <a href="{{ route('growth.observe', $student->id) }}" wire:navigate class="text-indigo-600 hover:underline">Add observation</a>
+                    </div>
+                </div>
+            @empty
+                <p class="text-sm text-gray-400">No students with growth tracking enabled yet.</p>
             @endforelse
         </div>
 

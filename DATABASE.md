@@ -1,6 +1,6 @@
 # Database
 
-MySQL in production (Hostinger), SQLite for local dev. 40 tables (see `database/migrations/`).
+MySQL in production (Hostinger), SQLite for local dev. 46 tables (see `database/migrations/`).
 
 ## Core groups
 
@@ -34,6 +34,12 @@ MySQL in production (Hostinger), SQLite for local dev. 40 tables (see `database/
 
 **Analytics:** `analytics_snapshots` — `scope` (national/state), `scope_id`, `metrics` (json), `calculated_at`. Populated by `php artisan analytics:recalculate` (see `app/Console/Commands/RecalculateAnalyticsSnapshots.php`), scheduled hourly. Read by the National/Researcher dashboards and the State Officer dashboard's summary numbers — never by the State dashboard's live complaint/retaliation queues.
 
+**Consent (DPDP Act 2023 Section 9):** `consent_records` — one row per child per purpose (`capability_growth`, `career_pathway`, `life_skills`, `physical_health`, `mental_wellbeing`, `alumni_outcomes`), storing the notice text actually shown, who granted it, and how they were verified as a guardian. Withdrawal sets `status`/`withdrawn_at` rather than deleting, so "was consent in force when this was collected?" stays answerable. Every read and write in the growth/career/life-skills modules goes through `ConsentService`.
+
+**Student growth (spec §15–16):** `capability_observations` — dated, single-observer notes across five NEP 2020 domains, tagged `strength` or `growth_area`, from a teacher/parent/self/peer. **There is deliberately no score, rating or level column and there must never be one** — see [`STUDENT_GROWTH_FRAMEWORK.md`](STUDENT_GROWTH_FRAMEWORK.md). Peer rows land as `moderation_status = 'pending'` and stay invisible until a teacher clears them. `growth_plans` (one per child/school/term, with `shared_with_parent_at` gating guardian visibility) and `growth_goals` (max 3 per plan; `support_at_school` and `support_at_home` are NOT NULL, so no goal exists without a next step).
+
+**Career & life skills (spec §17):** `career_interest_profiles` — a time series of child-stated interests, appended never updated, since interests are meant to change; no assigned-pathway column exists, suggestions are computed at read time by `CareerPathwayService`. `life_skills_tracking` — participation in structured activities (`participated`/`engaged`/`led`), explicitly not a score.
+
 **Notifications:** `notifications` — Laravel's standard database-notification table (uuid id, polymorphic `notifiable`, json `data`, `read_at`). Written to by `App\Notifications\*` classes on relationship-approval, complaint-status-change, invitation-acceptance, and appeal-decision events.
 
 ## Indexes
@@ -47,3 +53,11 @@ php artisan migrate --force
 ```
 
 `--force` is required in production since `APP_ENV=production` blocks interactive migration prompts. **Never run `migrate:fresh` against the live database** — it drops every table.
+
+### Applying schema changes by hand instead
+
+If you prefer running SQL in phpMyAdmin over `artisan migrate`, `database/sql/` holds ready-to-run
+scripts. They were generated from the migrations using Laravel's own MySQL schema grammar, so they
+match what `artisan migrate` would produce, and each one also records itself in the `migrations`
+table so a later `artisan migrate` doesn't try to recreate the same tables. Read the header comment
+in the script before running it — back up first.

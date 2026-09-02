@@ -1,5 +1,46 @@
 # Roadmap — what's deferred, and why
 
+## Phase 4 (current) — Student Growth, Career & Life Readiness
+
+The spec was revised (v2) to extend the platform past accountability into each child's development:
+capability mapping aligned to NEP 2020 / PARAKH's Holistic Progress Card, a teacher–parent–student
+growth loop, and exploratory career/life-skills tracking — all sitting on a DPDP Act Section 9
+consent layer that did not exist before. That's what this phase built (spec sections 15–17, 40).
+
+Shipped: `consent_records` + `ConsentService` (per-purpose, verifiable-guardian-only, withdrawable);
+`capability_observations` with the 360-degree observer model and peer moderation;
+`growth_plans`/`growth_goals` with the share-and-acknowledge loop; `career_interest_profiles` with
+read-time-only pathway suggestions; `life_skills_tracking`; `DevelopmentAccessService` implementing
+section 20's access matrix; four policies; guardian consent screen, shared growth view, observation
+entry, plan management, career exploration and life-skills screens; two new roles (`career_mentor`,
+`data_protection_officer`); and 35 tests covering the consent gate, access boundaries, and the
+no-labeling/no-bias rules.
+
+**The rules these modules must not break are documented in
+[`STUDENT_GROWTH_FRAMEWORK.md`](STUDENT_GROWTH_FRAMEWORK.md) — read it before extending them.**
+
+Still open in this area:
+
+- **Peer observation UI.** Model, moderation workflow and policy support it; no screen collects it
+  yet. Deliberate — it's the highest-risk surface here and should follow real usage of the rest.
+- **`alumni_outcomes` (spec §17 post-school).** Not built. Needs its own separate opt-in consent
+  flow, which is distinct work.
+- **Aggregate government views of growth/career trends (spec §32).** Not built. Must be anonymised
+  aggregates that never select an individual `student_user_id` — `DevelopmentAccessService` has no
+  officer branch by design, and adding one would be the wrong fix.
+- **Bias review checkpoint.** Spec section 45 Phase 6 asks for an explicit bias review and a narrow
+  single-school pilot before general availability. The automated gender-parity test is a regression
+  guard, not that review. **This module should not be switched on widely until that review happens.**
+- **Class rosters.** "A teacher's students" currently resolves to school-level enrolment, which is
+  wider than the spec's per-subject intent. Documented in `STUDENT_GROWTH_FRAMEWORK.md`.
+
+Not started from the v2 spec more broadly: fees & true annual cost (§9), facilities/sports/courses
+claims and ratings (§8, §11–12), external exams & coaching (§10), health and counsellor modules
+(§18–21), multilingual rollout (§33), and the international benchmarking view (§3).
+
+---
+
+
 The original spec for this platform is a multi-month, national-scale system (50+ tables, national gov analytics, AI moderation, teacher value-add scoring, anti-manipulation ML, a full 12-document security/privacy test regime). Phase 1 was a **fully working, fully tested core vertical slice**. Phase 2 added the remaining dashboards, an admin panel, retaliation reporting, the Teacher Effectiveness Index, and a first pass at AI-assisted features. Phase 3 (this update) closed out nearly everything Phase 2 had marked deferred or partial: 2FA, a hard identity-access reason gate, a formal appeals workflow, analytics-snapshot infrastructure, a real notifications system, the TEI value-add component, account-level fraud flagging wired into a real review queue, admin role/permission management, and attempted real mail delivery. This file lists what's still deliberately left out, so it's never mistaken for "built but broken."
 
 ## Deferred entirely (not built, not stubbed)

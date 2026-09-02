@@ -46,6 +46,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Volt::route('schools/{school}/academic-records', 'academic-records.index')->name('academic-records.index')->middleware('role:school_admin');
 
+    // Student growth, career and life readiness (spec sections 15-17).
+    // These routes carry no role middleware on purpose: who may open a given
+    // child's record is decided per child by DevelopmentAccessService inside
+    // each component (guardian, own school staff, or the child themself), and
+    // a role check here would only give a misleading impression that holding
+    // a role is what grants access.
+    Volt::route('consent', 'consent.manage')->name('consent.manage')->middleware('role:parent');
+    Volt::route('growth/{student}', 'growth.show')->name('growth.show');
+    Volt::route('growth/{student}/observe', 'growth.observe')->name('growth.observe');
+    Volt::route('growth/{student}/plan/{school}', 'growth.plan')->name('growth.plan');
+    Volt::route('career/{student}', 'career.show')->name('career.show');
+    Volt::route('life-skills/{student}', 'life-skills.show')->name('life-skills.show');
+
     Volt::route('notifications', 'notifications.index')->name('notifications.index');
 
     Route::get('complaints/{complaint}/evidence/{evidence}', ComplaintEvidenceController::class)

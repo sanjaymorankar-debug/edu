@@ -93,7 +93,7 @@ class UserSeeder extends Seeder
         ]);
         $demoParent->assignRole('parent');
         ParentProfile::create(['user_id' => $demoParent->id, 'phone' => '9800000001', 'verified_at' => now(), 'verification_method' => 'otp']);
-        ParentSchoolRelationship::create([
+        $demoParentRelationship = ParentSchoolRelationship::create([
             'user_id' => $demoParent->id, 'school_id' => $demoSchool->id,
             'status' => 'verified', 'verified_at' => now(),
         ]);
@@ -109,6 +109,11 @@ class UserSeeder extends Seeder
             'user_id' => $demoStudent->id, 'school_id' => $demoSchool->id,
             'class_grade' => '8', 'status' => 'verified', 'verified_at' => now(),
         ]);
+
+        // Make the demo parent the demo student's verified guardian. Consent
+        // and the growth modules are per child, so without this link the demo
+        // parent has no child to give consent for.
+        $demoParentRelationship->update(['student_user_id' => $demoStudent->id]);
 
         $demoTeacher = User::factory()->create([
             'name' => 'Teacher (Demo)',

@@ -9,7 +9,7 @@ This is a large spec built incrementally — see [`ROADMAP.md`](ROADMAP.md) for 
 
 ## What's actually here
 
-- Auth + RBAC for all 10 spec roles, each with a real working dashboard (Parent, Student, Teacher, School Admin, District/State Officer, National Admin, Researcher, System Admin)
+- Auth + RBAC for 12 spec roles, each with a real working dashboard (Parent, Student, Teacher, School Admin, District/State Officer, National Admin, Researcher, System Admin)
 - Public school registration (`/schools/register`) — the registrant becomes School Admin immediately; the school itself stays `pending` until a District/State Officer verifies it
 - Self-service parent/student/teacher onboarding (`/onboarding`) — link your account to a school; the link stays `pending` until the School Admin approves it
 - School Admin dashboard includes a "Pending Verifications" queue; District Officer dashboard includes a "Pending School Registrations" queue
@@ -26,6 +26,8 @@ This is a large spec built incrementally — see [`ROADMAP.md`](ROADMAP.md) for 
 - Analytics-snapshot infrastructure for the National/Researcher dashboards and the State Officer dashboard's summary numbers — scheduled recalculation instead of a live query on every page load
 - Advisory AI-assist (rule-based, no model configured yet): category suggestion and possible-duplicate detection on the complaint form, possible-duplicate detection on the retaliation and school-registration forms — never auto-applied, always overridable
 - A hard reason-required gate before any officer can reverse an anonymized identity, with mandatory audit logging
+- **Student growth, career & life readiness** — a dated, multi-source record of what each child is doing well and where they need support (aligned to NEP 2020 / PARAKH's Holistic Progress Card), a shared teacher–parent growth plan, and exploratory career-interest and life-skills tracking. Deliberately carries no score, no ability label and no assigned career track; see [`STUDENT_GROWTH_FRAMEWORK.md`](STUDENT_GROWTH_FRAMEWORK.md)
+- **DPDP Act 2023 Section 9 consent layer** — per-child, per-purpose guardian consent, granted only by a school-verified guardian, withdrawable instantly without a reason. Nothing in the growth/career modules is collected or shown without it, and government roles have no path to an individual child's record at all
 - Full audit logging + identity-access logging
 
 ## Quick start (local dev)
@@ -42,6 +44,7 @@ See [`DEPLOYMENT.md`](DEPLOYMENT.md).
 - [`DEPLOYMENT.md`](DEPLOYMENT.md) — Hostinger deployment steps
 - [`DATABASE.md`](DATABASE.md) — schema overview
 - [`SECURITY_PRIVACY.md`](SECURITY_PRIVACY.md) — identity-separation design, what's hardened vs. not yet
+- [`STUDENT_GROWTH_FRAMEWORK.md`](STUDENT_GROWTH_FRAMEWORK.md) — the growth/career modules' non-negotiable rules (no labeling, no streaming, no bias inputs, consent gating). **Read before extending those modules**
 - [`TESTING.md`](TESTING.md) — how to run the test suite, what's covered
 - [`TEST_ACCOUNTS.md`](TEST_ACCOUNTS.md) — demo login credentials (synthetic data only)
 - [`ROADMAP.md`](ROADMAP.md) — what's deferred to later phases, and why

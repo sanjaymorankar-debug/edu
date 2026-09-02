@@ -62,6 +62,26 @@ trait SetsUpPlatformData
         return $user;
     }
 
+    /**
+     * A parent verified as the guardian of one specific child — the link the
+     * consent and growth modules key off, since consent is per child.
+     */
+    protected function makeGuardianOf(School $school, User $student): User
+    {
+        $user = User::factory()->create();
+        $user->assignRole('parent');
+
+        ParentSchoolRelationship::create([
+            'user_id' => $user->id,
+            'school_id' => $school->id,
+            'student_user_id' => $student->id,
+            'status' => 'verified',
+            'verified_at' => now(),
+        ]);
+
+        return $user;
+    }
+
     protected function makeVerifiedStudent(School $school): User
     {
         $user = User::factory()->create();

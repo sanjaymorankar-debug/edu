@@ -24,6 +24,20 @@ This is a test environment. All accounts and data are fabricated — do not reus
 
 Every role now has a real dashboard — nothing left on the placeholder screen. See `ROADMAP.md` for what's still simplified within each.
 
+## Trying the growth / career modules
+
+`parent@test.agtci.com` is seeded as the verified guardian of `student@test.agtci.com`, with consent
+already granted for growth, career and life-skills, and demo observations, a shared growth plan with
+two goals, two career-interest captures a term apart, and three life-skills activities.
+
+- As the **parent**: Dashboard → My Children → View growth, and "Consent settings" to see the DPDP
+  consent screen (turning a purpose off immediately hides it from the school).
+- As the **teacher** (`teacher@test.agtci.com`): Dashboard → Student Growth → View / Add observation,
+  and "Manage growth plan" from the growth page.
+- As the **student**: Dashboard → My Growth / My Interests.
+- To see the access boundary: log in as any officer (e.g. `district.pun@test.agtci.com`) and open
+  `/growth/<student id>` — it is a 403 by design, and there is no officer path to it.
+
 None of the seeded accounts have 2FA enabled by default — enable it yourself from Profile → "Two-Factor Authentication" → Manage (available to School Admin and the four officer/admin roles) to test that flow. Use `admin@test.agtci.com` for `/admin/fraud-flags`, `/admin/roles`, and `/admin/moderation`.
 
 Plus ~275 additional synthetic parent/student/teacher/school-admin accounts from the seeder — all share the same demo password, all have randomly generated `@example.com`-style emails from Faker. Query the database directly if you need to find one for a specific school/district.

@@ -2,6 +2,9 @@
 
 use App\Models\AnonymousIdentity;
 use App\Models\ParentSchoolRelationship;
+use App\Models\User;
+use App\Services\ConsentService;
+use App\Services\DevelopmentAccessService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -20,7 +23,21 @@ new #[Layout('layouts.app')] class extends Component
         $mySchools = ParentSchoolRelationship::where('user_id', $user->id)
             ->with('school:id,name,city')->get();
 
-        return compact('myComplaints', 'mySchools');
+        // Children this parent is verified for, with whether growth data is
+        // switched on — the consent state is shown here rather than hidden,
+        // so a parent always knows what is and isn't being collected.
+        $consent = app(ConsentService::class);
+
+        $myChildren = User::whereIn('id', app(DevelopmentAccessService::class)->guardianChildIds($user))
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn (User $child): array => [
+                'id' => $child->id,
+                'name' => $child->name,
+                'growth_consent' => $consent->hasConsent($child->id, 'capability_growth'),
+            ]);
+
+        return compact('myComplaints', 'mySchools', 'myChildren');
     }
 }; ?>
 
@@ -42,6 +59,39 @@ new #[Layout('layouts.app')] class extends Component
                 </div>
             @empty
                 <p class="text-sm text-gray-400">No linked schools yet. Use "Find School" to link one.</p>
+            @endforelse
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-semibold text-gray-900">My Children</h3>
+                <a href="{{ route('consent.manage') }}" wire:navigate class="text-sm text-indigo-600 hover:underline">Consent settings</a>
+            </div>
+            @forelse ($myChildren as $child)
+                <div class="flex flex-wrap items-center justify-between gap-2 py-3 border-b last:border-0">
+                    <div>
+                        <div class="text-sm font-medium text-gray-900">{{ $child['name'] }}</div>
+                        @if (! $child['growth_consent'])
+                            <div class="text-xs text-amber-700">
+                                Growth tracking is off — nothing is being collected.
+                            </div>
+                        @endif
+                    </div>
+                    <div class="flex gap-2">
+                        @if ($child['growth_consent'])
+                            <a href="{{ route('growth.show', $child['id']) }}" wire:navigate
+                                class="px-3 py-1.5 text-sm rounded bg-indigo-600 text-white hover:bg-indigo-700">View growth</a>
+                        @else
+                            <a href="{{ route('consent.manage') }}" wire:navigate
+                                class="px-3 py-1.5 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50">Review consent</a>
+                        @endif
+                    </div>
+                </div>
+            @empty
+                <p class="text-sm text-gray-400">
+                    No child linked to your account yet. Once a school verifies your link to your child,
+                    their growth record appears here.
+                </p>
             @endforelse
         </div>
 

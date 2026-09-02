@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
                 FeedbackSeeder::class,
                 TeacherFeedbackSeeder::class,
                 RetaliationReportSeeder::class,
+                StudentGrowthSeeder::class,
             ]);
         });
     }

@@ -46,6 +46,20 @@ new #[Layout('layouts.app')] class extends Component
         </div>
 
         <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="font-semibold text-gray-900 mb-2">My Growth</h3>
+            <p class="text-sm text-gray-600 mb-3">
+                What you're doing well, what you're working on, and what you're interested in.
+                This is yours — it isn't a grade, and nobody is ranked by it.
+            </p>
+            <div class="flex flex-wrap gap-3">
+                <a href="{{ route('growth.show', Auth::id()) }}" wire:navigate
+                    class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700">My Growth</a>
+                <a href="{{ route('career.show', Auth::id()) }}" wire:navigate
+                    class="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50">My Interests</a>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="font-semibold text-gray-900">Report a Problem</h3>
             </div>
