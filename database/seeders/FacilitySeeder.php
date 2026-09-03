@@ -84,6 +84,19 @@ class FacilitySeeder extends Seeder
             ]);
         }
 
+        // Spec section 29 — the school's answer to the swimming discrepancy,
+        // so the demo shows both sides rather than only the reports.
+        \App\Models\SchoolReply::create([
+            'school_id' => $school->id,
+            'context_type' => 'facility_discrepancy',
+            'context_key' => 'swimming',
+            'academic_year' => self::YEAR,
+            'body' => 'The pool closed in June for resurfacing after a leak and reopens in November. '
+                .'Swimming lessons have moved to the municipal pool in the meantime, with transport provided. '
+                .'We should have told families sooner and are sorry we did not.',
+            'author_user_id' => $recorder,
+        ]);
+
         // Reports come from synthetic pseudonyms rather than real accounts:
         // the ratings table only ever holds an anonymous_ref anyway, and this
         // keeps the demo from implying particular seeded families said these

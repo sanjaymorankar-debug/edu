@@ -102,6 +102,11 @@ class School extends Model
         return $this->hasMany(Course::class);
     }
 
+    public function replies(): HasMany
+    {
+        return $this->hasMany(SchoolReply::class);
+    }
+
     public function courseRatings(): HasMany
     {
         return $this->hasMany(CourseRating::class);

@@ -52,9 +52,6 @@ Still open in this area:
   note is wired up. Needs the same malware-scan/size-limit treatment complaint evidence gets.
 - **Per-facility, per-year score trends (§12) and the School Improvement Dashboard (§31).** The data
   supports it — ratings carry `academic_year` — but the trend view isn't built.
-- **A school's public written reply to a reported discrepancy (§29).** The discrepancy is surfaced
-  to the school on its own facilities page, but there's no public response field yet: a school can
-  currently correct its listing, not answer in words.
 - **Officer screens for verifying UDISE codes and facility evidence.** Both exist at model level
   (`markUdiseVerified()`, `FacilityClaim::markVerified()`) with no UI behind them yet, so in
   practice nothing gets verified without a console.
@@ -141,8 +138,24 @@ suppression treatment cannot drift apart between them.
 Still open in Phase 7: NAS data is not integrated (no public
 dataset wired in); and the AI-assist layer (§28) remains stubbed pending an API key.
 
-Not started from the v2 spec more broadly: multilingual rollout (§33) and the alumni-outcomes
-module (§17).
+## Multilingual (§33) — deliberately on hold
+
+**Decision: not started, pending professional translators.** The spec asks for twelve languages.
+The architecture is straightforward; the content is not. This platform carries two categories of
+text where an unreviewed translation is worse than English:
+
+- the **POCSO Act section 19** mandatory-reporting notice, which tells a reporter that filing here
+  does not discharge their legal duty to go to the police;
+- the **DPDP Act section 9** consent notices, which are the legal basis on which a child's health,
+  wellbeing and capability data is collected.
+
+A parent may act on either. Machine-translating them into twelve languages without review is a
+risk the platform should not take on a guardian's behalf, and shipping a half-translated interface
+would be worse UX than English alone. Held until reviewed translations are available; the i18n
+scaffolding should be built at the same time so translated strings land in a structure that fits
+them, rather than being retrofitted around English.
+
+Also not started: the alumni-outcomes module (§17).
 
 ---
 

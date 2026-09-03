@@ -1,6 +1,6 @@
 # Database
 
-MySQL in production (Hostinger), SQLite for local dev. 63 tables (see `database/migrations/`).
+MySQL in production (Hostinger), SQLite for local dev. 64 tables (see `database/migrations/`).
 
 ## Core groups
 
@@ -45,6 +45,8 @@ MySQL in production (Hostinger), SQLite for local dev. 63 tables (see `database/
 **Career & life skills (spec §17):** `career_interest_profiles` — a time series of child-stated interests, appended never updated, since interests are meant to change; no assigned-pathway column exists, suggestions are computed at read time by `CareerPathwayService`. `life_skills_tracking` — participation in structured activities (`participated`/`engaged`/`led`), explicitly not a score.
 
 **Courses & curriculum ratings (spec §8, §12):** `courses` — the school's catalogue, versioned per academic year, kept separate from `facility_claims` because a school can have an excellent laboratory and a poorly-taught chemistry course. `course_ratings` — section 12's ten dimensions as named columns rather than a JSON blob, so a dimension cannot quietly appear or disappear between submissions. Anonymous (`anonymous_ref`, never `user_id`), one rating per person per course per year. Every dimension is nullable and **students see all ten while parents are asked only the six they can realistically judge** — a parent rarely sees project work, and forcing a number there would manufacture data. `CourseRating::averages()` reports a response count per dimension, since they genuinely differ.
+
+**School right of reply (spec §29):** `school_replies` — a school's public answer to a reported claimed-vs-experienced gap or rating pattern. **Append-only**: a school posts a reply and, if things change, posts another; both stay visible and dated. Editing in place would let a published answer be quietly rewritten, and the record protects the school as much as the reader. A reply never removes, hides or scores down what it answers — it renders beside it, and a test asserts the discrepancy is unchanged by replying.
 
 **Safeguarding (spec §25):** `safeguarding_reports` — deliberately separate from `complaints` and never joined into general reporting. Anonymised like complaints (`anonymous_ref`, no `user_id`). The `external_report_*` columns record whether the POCSO Act §19 duty was discharged *outside* this platform; `legal_duty_shown_at` records that the platform surfaced the obligation — evidence about the platform's conduct, not the reporter's. `SafeguardingService` blocks closure of a POCSO-engaging case until an external report is recorded, and has no `school_admin` branch at all, so a school's ordinary administration cannot see these cases. `safeguarding_events` is the append-only case trail, separate from `audit_logs` so a general audit reader cannot learn a named school has a case.
 

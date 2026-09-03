@@ -2,6 +2,7 @@
 
 use App\Models\FacilityClaim;
 use App\Models\School;
+use App\Models\SchoolReply;
 use App\Services\ClaimedVsExperiencedService;
 use App\Support\FacilityTaxonomy;
 use Illuminate\Support\Facades\Auth;
@@ -34,6 +35,10 @@ new #[Layout('layouts.app')] class extends Component
     public string $provider = '';
 
     public string $evidenceNote = '';
+
+    public string $replyFacilityKey = '';
+
+    public string $replyBody = '';
 
     public bool $isMandatory = false;
 
@@ -116,6 +121,36 @@ new #[Layout('layouts.app')] class extends Component
         $this->flash = 'Facility added to your listing.';
     }
 
+    /**
+     * Spec section 29 — answer a reported gap in words.
+     *
+     * Deliberately does not touch the discrepancy itself: a reply sits beside
+     * what families reported, it does not remove or score it down.
+     */
+    public function postReply(): void
+    {
+        abort_unless($this->canManage(), 403);
+
+        $validated = $this->validate([
+            'replyFacilityKey' => ['required', 'in:'.FacilityTaxonomy::validationList()],
+            'replyBody' => ['required', 'string', 'min:20', 'max:2000'],
+        ], [
+            'replyBody.min' => 'Please give families enough of an explanation to be useful.',
+        ], ['replyFacilityKey' => 'facility', 'replyBody' => 'reply']);
+
+        SchoolReply::create([
+            'school_id' => $this->school->id,
+            'context_type' => 'facility_discrepancy',
+            'context_key' => $validated['replyFacilityKey'],
+            'academic_year' => $this->academicYear,
+            'body' => $validated['replyBody'],
+            'author_user_id' => Auth::id(),
+        ]);
+
+        $this->reset(['replyFacilityKey', 'replyBody']);
+        $this->flash = 'Your reply is now published beside what families reported.';
+    }
+
     public function removeClaim(int $claimId): void
     {
         abort_unless($this->canManage(), 403);
@@ -142,6 +177,12 @@ new #[Layout('layouts.app')] class extends Component
             'grouped' => FacilityTaxonomy::grouped(),
             'availabilityOptions' => FacilityClaim::AVAILABILITY,
             'verificationLabels' => FacilityClaim::VERIFICATION_STATUSES,
+            'myReplies' => SchoolReply::where('school_id', $this->school->id)
+                ->where('context_type', 'facility_discrepancy')
+                ->where('academic_year', $this->academicYear)
+                ->with('author:id,name')
+                ->latest()
+                ->get(),
         ];
     }
 }; ?>
@@ -175,6 +216,52 @@ new #[Layout('layouts.app')] class extends Component
                 </ul>
             </div>
         @endif
+
+        {{-- Spec section 29 — the school's right of reply. --}}
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="font-semibold text-gray-900 mb-1">Respond publicly</h3>
+            <p class="text-xs text-gray-500 mb-4">
+                Your reply appears on your public profile beside what families reported. It doesn't remove or
+                change their reports — both sides are shown. Replies are permanent and dated: post a new one if
+                the situation changes rather than editing the old one.
+            </p>
+
+            <form wire:submit="postReply" class="space-y-3">
+                <div>
+                    <label for="replyFacilityKey" class="block text-sm font-medium text-gray-700 mb-1">Which facility?</label>
+                    <select wire:model="replyFacilityKey" id="replyFacilityKey" class="w-full sm:w-80 rounded border-gray-300 text-sm">
+                        <option value="">Choose…</option>
+                        @foreach ($claims as $claim)
+                            <option value="{{ $claim->facility_key }}">{{ $claim->label() }}</option>
+                        @endforeach
+                    </select>
+                    @error('replyFacilityKey') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
+                </div>
+                <div>
+                    <label for="replyBody" class="block text-sm font-medium text-gray-700 mb-1">Your explanation</label>
+                    <textarea wire:model="replyBody" id="replyBody" rows="3" maxlength="2000"
+                        class="w-full rounded border-gray-300 text-sm"
+                        placeholder="e.g. The pool was closed from June for resurfacing and reopens in November. Swimming lessons moved to the municipal pool in the meantime."></textarea>
+                    @error('replyBody') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
+                </div>
+                <button type="submit" class="px-4 py-2 text-sm rounded bg-indigo-600 text-white hover:bg-indigo-700">Publish reply</button>
+            </form>
+
+            @if ($myReplies->isNotEmpty())
+                <div class="mt-5 pt-4 border-t">
+                    <h4 class="text-sm font-medium text-gray-700 mb-2">Replies you've published</h4>
+                    @foreach ($myReplies as $reply)
+                        <div class="py-2 border-b last:border-0">
+                            <div class="text-sm text-gray-900">{{ $reply->subjectLabel() }}</div>
+                            <p class="text-sm text-gray-600">{{ $reply->body }}</p>
+                            <div class="text-xs text-gray-400">
+                                {{ $reply->created_at->format('j M Y') }} &middot; {{ $reply->author?->name }}
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </div>
 
         <div class="bg-white rounded-lg shadow p-6">
             <label for="academicYear" class="block text-sm font-medium text-gray-700 mb-1">Academic year</label>

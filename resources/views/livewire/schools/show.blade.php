@@ -8,6 +8,7 @@ use App\Models\Fee;
 use App\Models\FeeRevision;
 use App\Models\ParentSchoolRelationship;
 use App\Models\School;
+use App\Models\SchoolReply;
 use App\Models\StudentSchoolRelationship;
 use App\Services\AnnualCostCalculator;
 use App\Services\ClaimedVsExperiencedService;
@@ -96,6 +97,14 @@ new #[Layout('layouts.app')] class extends Component
             'facilityComparison' => app(ClaimedVsExperiencedService::class)
                 ->compareSchool($this->school->id, $this->currentAcademicYear()),
             'facilityYear' => $this->currentAcademicYear(),
+            // Spec section 29 — shown beside the gap it answers, never instead
+            // of it. Keyed by facility so the view can pair them up.
+            'facilityReplies' => SchoolReply::where('school_id', $this->school->id)
+                ->where('context_type', 'facility_discrepancy')
+                ->where('academic_year', $this->currentAcademicYear())
+                ->latest()
+                ->get()
+                ->groupBy('context_key'),
             'exams' => ExternalExam::where('school_id', $this->school->id)
                 ->where('academic_year', $this->currentAcademicYear())->orderBy('exam_name')->get(),
             'coaching' => $coaching,
@@ -294,7 +303,9 @@ new #[Layout('layouts.app')] class extends Component
 
                 <div class="space-y-2">
                     @foreach ($facilityComparison as $row)
-                        <div class="flex flex-wrap items-center justify-between gap-3 py-2 border-b last:border-0">
+                        @php $replies = $facilityReplies->get($row['facility_key'], collect()); @endphp
+                        <div class="py-2 border-b last:border-0">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
                             <div class="flex-1 min-w-48">
                                 <span class="text-sm text-gray-800">{{ $row['label'] }}</span>
                                 <span class="text-xs text-gray-400">&middot; {{ $row['group'] }}</span>
@@ -324,6 +335,17 @@ new #[Layout('layouts.app')] class extends Component
                                     @endif
                                 </div>
                             </div>
+                        </div>
+
+                        {{-- Spec section 29: both sides. The school's answer
+                             sits beside the report, never in place of it. --}}
+                        @foreach ($replies as $reply)
+                            <div class="mt-2 ml-4 pl-3 border-l-2 border-indigo-200">
+                                <div class="text-xs font-medium text-indigo-800">Response from the school</div>
+                                <p class="text-sm text-gray-700">{{ $reply->body }}</p>
+                                <div class="text-xs text-gray-400">{{ $reply->created_at->format('j M Y') }}</div>
+                            </div>
+                        @endforeach
                         </div>
                     @endforeach
                 </div>

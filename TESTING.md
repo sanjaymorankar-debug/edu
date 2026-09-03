@@ -4,7 +4,7 @@
 php artisan test
 ```
 
-320 tests, all passing as of this build (Pest/PHPUnit via Laravel's test runner).
+328 tests, all passing as of this build (Pest/PHPUnit via Laravel's test runner).
 
 ## What's covered
 
@@ -32,6 +32,7 @@ php artisan test
 - **Benchmarking honesty** (`tests/Feature/Platform/BenchmarkHonestyTest.php`): `benchmark_references` has no score/rank/value/percentile column at the schema level, so an invented ranking cannot be stored even by mistake; the page leads with "There is no Indian PISA score on this page" rather than burying it; it never renders an Indian rank or score; measured data and structural practice are labelled separately and never merged; every domestic measure declares its provenance and coverage, and thin coverage is flagged as "too little data to read as representative"; school-reported figures say they are not independently verified; every seeded citation is sourced and dated, lands unverified, and the page says so; a verified citation drops the warning; the page is reachable without an account
 - **Course & curriculum ratings** (`tests/Feature/Platform/CourseRatingTest.php`): a student is asked all ten of section 12's dimensions, a parent only the six they can judge; a dimension a parent was never shown stays null even if a value is forced into it; a blank is stored as null rather than zero, so it can't drag an average down; averages report a per-dimension response count, since a course rated by twelve people on quality and eight on project work has genuinely different confidence in each; re-submitting updates rather than stacking; the table carries no user-identifying column; an outsider can't rate and an unlisted course can't be rated; the school and the public profile both show averages with counts, and a course with no ratings says so
 - **Accessibility** (`tests/Feature/Platform/AccessibilityTest.php`): regression guards for the specific WCAG 2.1 AA criteria that were failing — a skip-to-content link targeting a real `main` landmark (2.4.1), a per-page title (2.4.2), a declared document language (3.1.1), `role="status"`/`aria-live` on confirmation messages so a screen reader user learns their submission worked (4.1.3), and rating scales that name what is being rated via fieldset/legend plus a per-option `aria-label` (1.3.1, 3.3.2, 4.1.2) with a visible focus ring on the visually hidden radios (2.4.7). Both rating forms are asserted to use the shared component rather than hand-rolling the pattern. **These are regression guards, not an audit** — see `ROADMAP.md`
+- **School right of reply** (`tests/Feature/Platform/SchoolRightOfReplyTest.php`): a school can answer a reported discrepancy in words; the public profile shows the families' report and the school's response together; **replying provably does not change the discrepancy status, the report counts, or delete a single rating**; a second reply is appended rather than replacing the first, so a published answer cannot be quietly rewritten; a reply needs enough substance to be useful; another school's admin and a parent are both blocked
 - **Fraud-flag auto-creation** (`tests/Feature/Platform/SchoolFeedbackTest.php`): a burst of 5 feedback submissions for the same school within the default window creates exactly one open `feedback_spike` flag
 
 ## Manual browser verification (done for this build)
