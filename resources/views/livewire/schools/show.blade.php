@@ -176,6 +176,8 @@ new #[Layout('layouts.app')] class extends Component
                     {{-- Spec section 25: a separate, unmissable route. A concern
                          about a child's safety must not have to travel through
                          the general complaint queue to be seen. --}}
+                    <a href="{{ route('improvement.show', $school) }}" wire:navigate
+                        class="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50">Improvement over time</a>
                     <a href="{{ route('safeguarding.report', $school) }}" wire:navigate
                         class="inline-flex items-center px-4 py-2 border-2 border-red-600 text-red-700 text-sm rounded-md hover:bg-red-50">Report a concern about a child's safety</a>
                     <a href="{{ route('feedback.create', $school) }}" wire:navigate

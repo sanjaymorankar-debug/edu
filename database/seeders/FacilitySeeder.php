@@ -101,6 +101,30 @@ class FacilitySeeder extends Seeder
         // the ratings table only ever holds an anonymous_ref anyway, and this
         // keeps the demo from implying particular seeded families said these
         // things.
+        // A previous year, deliberately worse, so the improvement dashboard
+        // (spec section 31) has an actual trend to show rather than reading
+        // "not enough years yet" everywhere. A school that started badly and
+        // improved is the case that section exists to make visible.
+        foreach (self::REPORTS as $facilityKey => $reports) {
+            foreach ($reports as $index => $report) {
+                FacilityRating::create([
+                    'school_id' => $school->id,
+                    'facility_key' => $facilityKey,
+                    'academic_year' => '2025-26',
+                    'anonymous_ref' => AnonymousIdentity::generateRef(),
+                    'rater_role' => $index % 3 === 0 ? 'student' : 'parent',
+                    // Downgrade last year's picture by one step.
+                    'availability_report' => match ($report) {
+                        'available' => 'partially_available',
+                        'partially_available' => 'not_available',
+                        default => 'not_available',
+                    },
+                    'quality' => random_int(1, 3),
+                    'submitted_at' => now()->subYear(),
+                ]);
+            }
+        }
+
         foreach (self::REPORTS as $facilityKey => $reports) {
             foreach ($reports as $index => $report) {
                 FacilityRating::create([

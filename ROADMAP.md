@@ -50,8 +50,6 @@ Still open in this area:
 
 - **Evidence file uploads on facility claims.** `evidence_path` exists on the table; only the text
   note is wired up. Needs the same malware-scan/size-limit treatment complaint evidence gets.
-- **Per-facility, per-year score trends (§12) and the School Improvement Dashboard (§31).** The data
-  supports it — ratings carry `academic_year` — but the trend view isn't built.
 - **Officer screens for verifying UDISE codes and facility evidence.** Both exist at model level
   (`markUdiseVerified()`, `FacilityClaim::markVerified()`) with no UI behind them yet, so in
   practice nothing gets verified without a console.

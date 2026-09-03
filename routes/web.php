@@ -10,6 +10,10 @@ Volt::route('schools', 'schools.index')->name('schools.index');
 Volt::route('schools/register', 'schools.register')->name('schools.register');
 Volt::route('schools/{school}', 'schools.show')->name('schools.show');
 
+// Spec section 31 - public on purpose: improvement should be as visible as
+// criticism, and a trend view only the school could see would defeat that.
+Volt::route('schools/{school}/improvement', 'improvement.show')->name('improvement.show');
+
 // Spec section 3 - public, and deliberately reachable without an account.
 Volt::route('how-india-compares', 'benchmarks.index')->name('benchmarks.index');
 
