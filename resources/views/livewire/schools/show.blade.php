@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\CoachingProgramme;
+use App\Models\ExternalExam;
 use App\Models\Fee;
 use App\Models\FeeRevision;
 use App\Models\ParentSchoolRelationship;
@@ -62,6 +64,11 @@ new #[Layout('layouts.app')] class extends Component
 
         $calculator = app(AnnualCostCalculator::class);
 
+        $coaching = CoachingProgramme::where('school_id', $this->school->id)
+            ->where('academic_year', $this->currentAcademicYear())
+            ->orderBy('programme_name')
+            ->get();
+
         return [
             'recentComplaints' => $recentComplaints,
             'verifiedTeachers' => $verifiedTeachers,
@@ -77,6 +84,13 @@ new #[Layout('layouts.app')] class extends Component
             'facilityComparison' => app(ClaimedVsExperiencedService::class)
                 ->compareSchool($this->school->id, $this->currentAcademicYear()),
             'facilityYear' => $this->currentAcademicYear(),
+            'exams' => ExternalExam::where('school_id', $this->school->id)
+                ->where('academic_year', $this->currentAcademicYear())->orderBy('exam_name')->get(),
+            'coaching' => $coaching,
+            // Spec section 10 — compulsory costs billed outside the published
+            // fee register. Stated as a factual gap between two things the
+            // school itself recorded, never as an allegation.
+            'unbundledMandatory' => $coaching->filter(fn (CoachingProgramme $c): bool => $c->isUnbundledMandatoryCost()),
         ];
     }
 }; ?>
@@ -218,6 +232,33 @@ new #[Layout('layouts.app')] class extends Component
                     fees — it means nothing has been reported.
                 </p>
             @endif
+
+            {{-- Spec section 10 feeding back into section 9. Deliberately outside
+                 the has-data branch above: a school that publishes no fees at all
+                 but charges compulsory coaching is the case where an unrecorded
+                 cost matters most, and hiding this panel there would be exactly
+                 backwards. --}}
+            @if ($unbundledMandatory->isNotEmpty())
+                <div class="mt-4 bg-amber-50 border border-amber-200 rounded p-4">
+                    <div class="text-sm font-medium text-amber-900 mb-1">
+                        Not included in the figures above
+                    </div>
+                    <p class="text-xs text-amber-900 mb-2">
+                        The school records these as compulsory but bills them separately from school fees, so
+                        they are not part of {{ $feeSummary['has_data'] ? 'the totals above' : 'any published fee figure' }}.
+                    </p>
+                    @foreach ($unbundledMandatory as $programme)
+                        <div class="flex justify-between text-sm text-amber-900">
+                            <span>{{ $programme->programme_name }}</span>
+                            <span>₹{{ number_format((float) $programme->fee) }}</span>
+                        </div>
+                    @endforeach
+                    <div class="flex justify-between text-sm font-semibold text-amber-900 border-t border-amber-200 mt-2 pt-2">
+                        <span>Additional compulsory cost</span>
+                        <span>₹{{ number_format($unbundledMandatory->sum(fn ($p) => (float) $p->fee)) }}</span>
+                    </div>
+                </div>
+            @endif
         </div>
 
         <div class="bg-white rounded-lg shadow p-6">
@@ -282,6 +323,58 @@ new #[Layout('layouts.app')] class extends Component
                 </p>
             @endif
         </div>
+
+        @if ($exams->isNotEmpty() || $coaching->isNotEmpty())
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="font-semibold text-gray-900 mb-1">Exams &amp; coaching</h3>
+                <p class="text-xs text-gray-500 mb-4">School-reported for {{ $facilityYear }}.</p>
+
+                @if ($exams->isNotEmpty())
+                    <h4 class="text-sm font-medium text-gray-700 mb-2">External exams</h4>
+                    <div class="space-y-1 mb-4">
+                        @foreach ($exams as $exam)
+                            <div class="flex flex-wrap items-center justify-between gap-2 py-1 border-b last:border-0">
+                                <div>
+                                    <span class="text-sm text-gray-800">{{ $exam->exam_name }}</span>
+                                    <span class="text-xs text-gray-400">&middot; {{ $exam->typeLabel() }}</span>
+                                    @if ($exam->is_mandatory)
+                                        <span class="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-900">compulsory</span>
+                                    @endif
+                                </div>
+                                <span class="text-sm text-gray-700">
+                                    @if ($exam->totalCost() > 0) ₹{{ number_format($exam->totalCost()) }} @else — @endif
+                                </span>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+
+                @if ($coaching->isNotEmpty())
+                    <h4 class="text-sm font-medium text-gray-700 mb-2">Coaching &amp; preparation</h4>
+                    <div class="space-y-1">
+                        @foreach ($coaching as $programme)
+                            <div class="flex flex-wrap items-center justify-between gap-2 py-1 border-b last:border-0">
+                                <div>
+                                    <span class="text-sm text-gray-800">{{ $programme->programme_name }}</span>
+                                    <span class="text-xs text-gray-400">&middot; {{ $programme->typeLabel() }}</span>
+                                    @if ($programme->isEffectivelyCompulsory())
+                                        <span class="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-900">
+                                            {{ $programme->is_mandatory ? 'compulsory' : 'in school hours' }}
+                                        </span>
+                                    @endif
+                                    @if ($programme->bundled_into_school_fees)
+                                        <span class="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-800">in school fees</span>
+                                    @endif
+                                </div>
+                                <span class="text-sm text-gray-700">
+                                    @if ($programme->fee) ₹{{ number_format((float) $programme->fee) }} @else — @endif
+                                </span>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+        @endif
 
         @if ($school->profile)
             <div class="bg-white rounded-lg shadow p-6">
