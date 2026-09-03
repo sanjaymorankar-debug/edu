@@ -34,9 +34,37 @@ Still open in this area:
 - **Class rosters.** "A teacher's students" currently resolves to school-level enrolment, which is
   wider than the spec's per-subject intent. Documented in `STUDENT_GROWTH_FRAMEWORK.md`.
 
-Not started from the v2 spec more broadly: fees & true annual cost (§9), facilities/sports/courses
-claims and ratings (§8, §11–12), external exams & coaching (§10), health and counsellor modules
-(§18–21), multilingual rollout (§33), and the international benchmarking view (§3).
+---
+
+## Phase 5 — School core: UDISE, fees, facilities
+
+Spec Phase 1 (sections 5, 8, 9, 11, 12). Shipped: `udise_code` on schools with a
+non-mass-assignable verification; the fee register with per-year history, in-year `fee_revisions`
+requiring a reason, and `AnnualCostCalculator` producing separate first-year and continuing-year
+totals; the canonical `FacilityTaxonomy` shared by claims and ratings; `facility_claims`
+(versioned per year, evidence-gated verification) and anonymous `facility_ratings`; and
+`ClaimedVsExperiencedService` implementing section 11's comparison with a 3-report floor before
+anything is labelled at all.
+
+Still open in this area:
+
+- **Course/curriculum rating dimensions (§12).** Sports and academic facilities are in the taxonomy
+  and rateable, but the course-specific dimensions (curriculum relevance, practical learning,
+  career relevance, project work) are not built.
+- **External exams & coaching (§10).** Not started — no tables yet.
+- **Evidence file uploads on facility claims.** `evidence_path` exists on the table; only the text
+  note is wired up. Needs the same malware-scan/size-limit treatment complaint evidence gets.
+- **Per-facility, per-year score trends (§12) and the School Improvement Dashboard (§31).** The data
+  supports it — ratings carry `academic_year` — but the trend view isn't built.
+- **A school's public written reply to a reported discrepancy (§29).** The discrepancy is surfaced
+  to the school on its own facilities page, but there's no public response field yet: a school can
+  currently correct its listing, not answer in words.
+- **Officer screens for verifying UDISE codes and facility evidence.** Both exist at model level
+  (`markUdiseVerified()`, `FacilityClaim::markVerified()`) with no UI behind them yet, so in
+  practice nothing gets verified without a console.
+
+Not started from the v2 spec more broadly: health and counsellor modules (§18–21), multilingual
+rollout (§33), and the international benchmarking view (§3).
 
 ---
 

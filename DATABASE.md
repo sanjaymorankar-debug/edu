@@ -1,6 +1,6 @@
 # Database
 
-MySQL in production (Hostinger), SQLite for local dev. 46 tables (see `database/migrations/`).
+MySQL in production (Hostinger), SQLite for local dev. 51 tables (see `database/migrations/`).
 
 ## Core groups
 
@@ -33,6 +33,10 @@ MySQL in production (Hostinger), SQLite for local dev. 46 tables (see `database/
 **2FA:** `two_factor_authentications` — deliberately a separate table from `users` (not a column) so an encrypted secret/recovery-code set is never accidentally exposed via a broad `User::all()` or `select *` query. `secret` is `encrypted`, `recovery_codes` is `encrypted:array`.
 
 **Analytics:** `analytics_snapshots` — `scope` (national/state), `scope_id`, `metrics` (json), `calculated_at`. Populated by `php artisan analytics:recalculate` (see `app/Console/Commands/RecalculateAnalyticsSnapshots.php`), scheduled hourly. Read by the National/Researcher dashboards and the State Officer dashboard's summary numbers — never by the State dashboard's live complaint/retaliation queues.
+
+**Fees & true annual cost (spec §9):** `fees` — one row per school/year/class/charge, with category, amount, frequency, mandatory and refundable flags, and a `state_cap_status` (fee regulation is a state subject, so there is no single national rule to check against). History is inherent: a year's fees are that year's rows and are never overwritten. `fee_revisions` covers edits *within* a year — both the before and after amount, a full JSON snapshot of the prior state, and a required reason. `AnnualCostCalculator` turns these into first-year and continuing-year totals, keeping one-time charges and optional charges separate rather than merging everything into one number.
+
+**Facilities, claims & experience (spec §8, §11, §12):** `facility_claims` — what a school says it offers, versioned by academic year, keyed against the canonical taxonomy in `App\Support\FacilityTaxonomy` (a code constant, deliberately not a table: claims, ratings and history must share one list or claimed-vs-experienced cannot be computed). `verification_status` is about evidence, not truth, and is not mass-assignable — `markVerified()` is the only way to set it, so a school cannot self-verify. `facility_ratings` — the experience side, storing `anonymous_ref` and never a `user_id` (same identity separation as complaints, spec §26), with structured per-dimension scores rather than one star rating, and one rating per person per facility per year. `ClaimedVsExperiencedService` compares the two into Consistent / Partially consistent / Significant discrepancy reported, showing nothing at all below 3 reports.
 
 **Consent (DPDP Act 2023 Section 9):** `consent_records` — one row per child per purpose (`capability_growth`, `career_pathway`, `life_skills`, `physical_health`, `mental_wellbeing`, `alumni_outcomes`), storing the notice text actually shown, who granted it, and how they were verified as a guardian. Withdrawal sets `status`/`withdrawn_at` rather than deleting, so "was consent in force when this was collected?" stays answerable. Every read and write in the growth/career/life-skills modules goes through `ConsentService`.
 

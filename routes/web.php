@@ -46,6 +46,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Volt::route('schools/{school}/academic-records', 'academic-records.index')->name('academic-records.index')->middleware('role:school_admin');
     Volt::route('schools/{school}/fees', 'fees.manage')->name('fees.manage')->middleware('role:school_admin|system_admin');
+    Volt::route('schools/{school}/facilities', 'facilities.manage')->name('facilities.manage')->middleware('role:school_admin|system_admin');
+    Volt::route('schools/{school}/facilities/rate', 'facilities.rate')->name('facilities.rate')->middleware('role:parent|student');
 
     // Student growth, career and life readiness (spec sections 15-17).
     // These routes carry no role middleware on purpose: who may open a given

@@ -6,6 +6,7 @@ use App\Models\ParentSchoolRelationship;
 use App\Models\School;
 use App\Models\StudentSchoolRelationship;
 use App\Services\AnnualCostCalculator;
+use App\Services\ClaimedVsExperiencedService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -17,6 +18,14 @@ new #[Layout('layouts.app')] class extends Component
     public function mount(School $school): void
     {
         $this->school = $school->load(['profile', 'state', 'district', 'latestQualityScore']);
+    }
+
+    private function currentAcademicYear(): string
+    {
+        $now = now();
+        $startYear = $now->month >= 4 ? $now->year : $now->year - 1;
+
+        return $startYear.'-'.substr((string) ($startYear + 1), 2);
     }
 
     public function with(): array
@@ -65,6 +74,9 @@ new #[Layout('layouts.app')] class extends Component
             'feeIncreases' => FeeRevision::where('school_id', $this->school->id)
                 ->whereColumn('new_amount', '>', 'previous_amount')
                 ->latest('changed_at')->limit(5)->with('fee:id,label')->get(),
+            'facilityComparison' => app(ClaimedVsExperiencedService::class)
+                ->compareSchool($this->school->id, $this->currentAcademicYear()),
+            'facilityYear' => $this->currentAcademicYear(),
         ];
     }
 }; ?>
@@ -199,6 +211,69 @@ new #[Layout('layouts.app')] class extends Component
                 <p class="text-sm text-gray-400">
                     This school hasn't published its fees here yet. An empty fee section is not evidence of low
                     fees — it means nothing has been reported.
+                </p>
+            @endif
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex flex-wrap items-baseline justify-between gap-2 mb-1">
+                <h3 class="font-semibold text-gray-900">What it offers, and what families report</h3>
+                <span class="text-xs text-gray-400">{{ $facilityYear }}</span>
+            </div>
+
+            @if (count($facilityComparison) > 0)
+                <p class="text-xs text-gray-500 mb-4">
+                    The left column is what the school lists. The right is what verified parents and students
+                    report experiencing. A gap is a <em>reported difference</em>, not a finding against the
+                    school — a facility can exist and still be hard to access, and schools can respond.
+                </p>
+
+                <div class="space-y-2">
+                    @foreach ($facilityComparison as $row)
+                        <div class="flex flex-wrap items-center justify-between gap-3 py-2 border-b last:border-0">
+                            <div class="flex-1 min-w-48">
+                                <span class="text-sm text-gray-800">{{ $row['label'] }}</span>
+                                <span class="text-xs text-gray-400">&middot; {{ $row['group'] }}</span>
+                                @if ($row['verification_status'] === 'verified')
+                                    <span class="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-800">evidence checked</span>
+                                @endif
+                            </div>
+                            <div class="text-right">
+                                <span class="text-xs px-2 py-0.5 rounded-full
+                                    @if ($row['status'] === 'consistent') bg-green-100 text-green-800
+                                    @elseif ($row['status'] === 'partially_consistent') bg-yellow-100 text-yellow-800
+                                    @elseif ($row['status'] === 'significant_discrepancy') bg-amber-100 text-amber-900
+                                    @else bg-gray-100 text-gray-600 @endif">
+                                    {{ $row['status_label'] }}
+                                </span>
+                                <div class="text-xs text-gray-400 mt-0.5">
+                                    @if ($row['report_count'] > 0)
+                                        {{ $row['report_count'] }} {{ Str::plural('report', $row['report_count']) }}
+                                        {{-- The confidence tier is only meaningful once a status has
+                                             actually been assigned; below the threshold the status
+                                             already says there isn't enough to go on. --}}
+                                        @if ($row['confidence'] !== 'insufficient')
+                                            &middot; {{ $row['confidence'] }} confidence
+                                        @endif
+                                    @else
+                                        awaiting reports
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+
+                @if ($canSubmit)
+                    <a href="{{ route('facilities.rate', $school) }}" wire:navigate
+                        class="inline-block mt-4 px-4 py-2 text-sm rounded bg-indigo-600 text-white hover:bg-indigo-700">
+                        Report on a facility
+                    </a>
+                @endif
+            @else
+                <p class="text-sm text-gray-400">
+                    This school hasn't listed its facilities for {{ $facilityYear }} yet. Nothing is claimed here,
+                    so there is nothing to compare against.
                 </p>
             @endif
         </div>

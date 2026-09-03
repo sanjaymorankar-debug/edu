@@ -30,6 +30,7 @@ class DatabaseSeeder extends Seeder
                 RetaliationReportSeeder::class,
                 StudentGrowthSeeder::class,
                 FeeSeeder::class,
+                FacilitySeeder::class,
             ]);
         });
     }
