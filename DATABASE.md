@@ -1,6 +1,6 @@
 # Database
 
-MySQL in production (Hostinger), SQLite for local dev. 51 tables (see `database/migrations/`).
+MySQL in production (Hostinger), SQLite for local dev. 60 tables (see `database/migrations/`).
 
 ## Core groups
 
@@ -43,6 +43,12 @@ MySQL in production (Hostinger), SQLite for local dev. 51 tables (see `database/
 **Student growth (spec §15–16):** `capability_observations` — dated, single-observer notes across five NEP 2020 domains, tagged `strength` or `growth_area`, from a teacher/parent/self/peer. **There is deliberately no score, rating or level column and there must never be one** — see [`STUDENT_GROWTH_FRAMEWORK.md`](STUDENT_GROWTH_FRAMEWORK.md). Peer rows land as `moderation_status = 'pending'` and stay invisible until a teacher clears them. `growth_plans` (one per child/school/term, with `shared_with_parent_at` gating guardian visibility) and `growth_goals` (max 3 per plan; `support_at_school` and `support_at_home` are NOT NULL, so no goal exists without a next step).
 
 **Career & life skills (spec §17):** `career_interest_profiles` — a time series of child-stated interests, appended never updated, since interests are meant to change; no assigned-pathway column exists, suggestions are computed at read time by `CareerPathwayService`. `life_skills_tracking` — participation in structured activities (`participated`/`engaged`/`led`), explicitly not a score.
+
+**Safeguarding (spec §25):** `safeguarding_reports` — deliberately separate from `complaints` and never joined into general reporting. Anonymised like complaints (`anonymous_ref`, no `user_id`). The `external_report_*` columns record whether the POCSO Act §19 duty was discharged *outside* this platform; `legal_duty_shown_at` records that the platform surfaced the obligation — evidence about the platform's conduct, not the reporter's. `SafeguardingService` blocks closure of a POCSO-engaging case until an external report is recorded, and has no `school_admin` branch at all, so a school's ordinary administration cannot see these cases. `safeguarding_events` is the append-only case trail, separate from `audit_logs` so a general audit reader cannot learn a named school has a case.
+
+**External exams & coaching (spec §10):** `external_exams` and `coaching_programmes`, versioned per academic year. `is_mandatory` + `bundled_into_school_fees` on a coaching programme are what let the public profile show a compulsory cost sitting outside the published fee register — a factual gap between two things the school itself recorded, never an allegation. `during_school_hours` counts as effectively compulsory regardless of label.
+
+**Health & wellbeing (spec §18–21):** all gated behind DPDP §9 consent (`physical_health`, `mental_wellbeing` purposes) via `HealthAccessService`. `physical_health_records` — one row per examination, never overwritten, so the record is a history. `wellbeing_concerns` — **teacher** observations, with no diagnosis, severity, risk or treatment column, deliberately a *separate table* from `counselling_sessions` so a shared table can't put a teacher's opinion where a clinical note belongs (§19's hard rule, enforced at the data model; a schema test guards it). `counselling_sessions` — the stricter tier: `session_notes` is counsellor-only, `shareable_summary` is what a guardian sees and is written deliberately rather than extracted. `health_followups` — §21's identified → referred → follow_up → completed → closed lifecycle. `health_access_logs` — append-only, records refused attempts as well as successful ones. `HealthAccessService` has no government branch: officers get aggregates only.
 
 **Notifications:** `notifications` — Laravel's standard database-notification table (uuid id, polymorphic `notifiable`, json `data`, `read_at`). Written to by `App\Notifications\*` classes on relationship-approval, complaint-status-change, invitation-acceptance, and appeal-decision events.
 

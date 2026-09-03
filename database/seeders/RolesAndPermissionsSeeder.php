@@ -52,6 +52,14 @@ class RolesAndPermissionsSeeder extends Seeder
             // external report been recorded?), not on the holder's role, and
             // SafeguardingService enforces that.
             'handle-safeguarding-cases',
+            // Spec sections 18-20. As with growth data, there is deliberately
+            // no "view-any-health-record" permission: who may read a given
+            // child's record is decided per child by HealthAccessService
+            // (guardian, the child, or authorised staff at their own school
+            // with consent in force), never granted wholesale by a role.
+            'record-physical-health',
+            'raise-wellbeing-concern',
+            'record-counselling-session',
         ];
 
         foreach ($permissions as $permission) {
@@ -62,7 +70,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'public' => [],
             'parent' => ['submit-complaint', 'submit-feedback', 'view-own-complaints', 'record-capability-observation', 'manage-consent'],
             'student' => ['submit-complaint', 'submit-feedback', 'view-own-complaints', 'record-capability-observation'],
-            'teacher' => ['view-own-complaints', 'record-capability-observation', 'manage-growth-plan', 'record-life-skills'],
+            // A teacher may raise a wellbeing observation and nothing more —
+            // spec section 19's "teachers must never diagnose" expressed as a
+            // permission set, not just as a UI choice.
+            'teacher' => ['view-own-complaints', 'record-capability-observation', 'manage-growth-plan', 'record-life-skills', 'raise-wellbeing-concern'],
+            'school_nurse' => ['record-physical-health', 'raise-wellbeing-concern'],
+            // Section 20: a counsellor may read a physical-health record but
+            // must not alter one, so no record-physical-health here.
+            'counsellor' => ['record-counselling-session', 'raise-wellbeing-concern'],
             'career_mentor' => ['record-life-skills', 'record-capability-observation'],
             // Note school_admin does NOT hold handle-safeguarding-cases, and
             // must not: spec section 25 and POCSO section 19 mean a school's

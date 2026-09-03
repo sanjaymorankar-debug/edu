@@ -21,6 +21,9 @@ class DashboardController extends Controller
             // Checked before the officer roles so a user holding both lands on
             // the more specific one.
             $user->hasRole('child_safety_officer') => redirect()->route('safeguarding.queue'),
+            // Like the Child Safety Officer, a counsellor's work is one queue
+            // rather than a general dashboard.
+            $user->hasRole('counsellor') => redirect()->route('counselling.portal'),
             $user->hasRole('district_officer') => redirect()->route('dashboard.district'),
             $user->hasRole('state_officer') => redirect()->route('dashboard.state'),
             $user->hasRole('national_admin') => redirect()->route('dashboard.national'),

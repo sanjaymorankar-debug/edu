@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\AnonymousIdentity;
+use App\Models\HealthFollowup;
 use App\Models\ParentSchoolRelationship;
 use App\Models\User;
 use App\Services\ConsentService;
@@ -35,6 +36,12 @@ new #[Layout('layouts.app')] class extends Component
                 'id' => $child->id,
                 'name' => $child->name,
                 'growth_consent' => $consent->hasConsent($child->id, 'capability_growth'),
+                'health_consent' => $consent->hasConsent($child->id, 'physical_health'),
+                // Open follow-ups are surfaced on the dashboard rather than
+                // only inside the record: a screening finding nobody acted on
+                // is exactly what a parent needs pushed at them.
+                'open_followups' => HealthFollowup::where('student_user_id', $child->id)
+                    ->whereNotIn('status', ['completed', 'closed'])->count(),
             ]);
 
         return compact('myComplaints', 'mySchools', 'myChildren');
@@ -76,8 +83,18 @@ new #[Layout('layouts.app')] class extends Component
                                 Growth tracking is off — nothing is being collected.
                             </div>
                         @endif
+                        @if ($child['health_consent'] && $child['open_followups'] > 0)
+                            <div class="text-xs text-amber-700">
+                                {{ $child['open_followups'] }} health
+                                {{ Str::plural('follow-up', $child['open_followups']) }} still open.
+                            </div>
+                        @endif
                     </div>
                     <div class="flex gap-2">
+                        @if ($child['health_consent'])
+                            <a href="{{ route('health.show', $child['id']) }}" wire:navigate
+                                class="px-3 py-1.5 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50">Health record</a>
+                        @endif
                         @if ($child['growth_consent'])
                             <a href="{{ route('growth.show', $child['id']) }}" wire:navigate
                                 class="px-3 py-1.5 text-sm rounded bg-indigo-600 text-white hover:bg-indigo-700">View growth</a>

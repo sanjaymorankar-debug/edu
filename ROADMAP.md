@@ -63,8 +63,47 @@ Still open in this area:
   (`markUdiseVerified()`, `FacilityClaim::markVerified()`) with no UI behind them yet, so in
   practice nothing gets verified without a console.
 
-Not started from the v2 spec more broadly: health and counsellor modules (§18–21), multilingual
-rollout (§33), and the international benchmarking view (§3).
+---
+
+## Phase 6 — Safeguarding, exams & coaching, health & wellbeing
+
+Closes spec Phase 1 and Phase 5, and fills the Phase 4 gap left when the growth modules were
+built out of order.
+
+**Safeguarding (§25).** Its own table, event trail and access rules, separate from complaints.
+School administrators cannot see these cases at all; a POCSO-engaging case cannot be closed until
+an external report to police/SJPU is recorded; and the platform records that it surfaced the legal
+duty without ever implying the duty was discharged.
+
+**Exams & coaching (§10).** Completes Phase 1. The useful part is the feedback into §9: a
+compulsory programme billed outside the fee register is shown as a cost the published totals don't
+include.
+
+**Health & wellbeing (§18–21).** Consent-gated screenings with a real follow-up lifecycle,
+teacher observations structurally separated from clinical notes, a counsellor tier where raw notes
+never leave the counsellor, and an append-only access log that records refusals too.
+
+Still open in this area:
+
+- **Officer screens for verifying UDISE codes and facility evidence** (carried over from Phase 5 —
+  still model-level only).
+- **Document uploads on health records (§18, §21).** The spec asks for malware-scanned,
+  access-controlled medical reports served outside public URLs. Not built; records are structured
+  fields only.
+- **Aggregate health/wellbeing statistics for government dashboards (§32).** The access matrix
+  correctly gives officers nothing individual, but the aggregate counts that should replace it
+  aren't computed yet — so officers currently see no health data at all rather than anonymised
+  totals.
+- **A counsellor caseload view.** `HealthAccessService::caseloadStudentIds()` exists and is
+  unused; the portal is driven by the observation queue instead.
+- **Retention and erasure schedules (§21, §40).** Consent withdrawal hides data; per-category
+  retention periods and secure deletion are not implemented.
+- **Safeguarding notifications.** Cases reach the queue but nobody is alerted — an immediate-danger
+  case relies on someone opening the page.
+
+Not started from the v2 spec more broadly: multilingual rollout (§33), the international
+benchmarking view (§3), course/curriculum rating dimensions (§12), and the alumni-outcomes module
+(§17).
 
 ---
 

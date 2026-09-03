@@ -70,6 +70,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Volt::route('career/{student}', 'career.show')->name('career.show');
     Volt::route('life-skills/{student}', 'life-skills.show')->name('life-skills.show');
 
+    // Health and wellbeing (spec sections 18-21). Like the growth routes,
+    // these carry no role middleware: who may open a given child's record is
+    // decided per child by HealthAccessService (guardian, the child, or
+    // authorised staff at their school with consent in force), and a role
+    // check here would suggest holding a role is what grants access.
+    Volt::route('health/{student}', 'health.show')->name('health.show');
+    Volt::route('health/{student}/record', 'health.record')->name('health.record');
+    Volt::route('wellbeing/{student}/concern', 'wellbeing.concern')->name('wellbeing.concern');
+    Volt::route('counselling', 'counselling.portal')->name('counselling.portal')->middleware('role:counsellor');
+
     Volt::route('notifications', 'notifications.index')->name('notifications.index');
 
     Route::get('complaints/{complaint}/evidence/{evidence}', ComplaintEvidenceController::class)
