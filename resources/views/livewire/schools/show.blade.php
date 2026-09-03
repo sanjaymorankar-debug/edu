@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\CoachingProgramme;
+use App\Models\Course;
+use App\Models\CourseRating;
 use App\Models\ExternalExam;
 use App\Models\Fee;
 use App\Models\FeeRevision;
@@ -69,6 +71,16 @@ new #[Layout('layouts.app')] class extends Component
             ->orderBy('programme_name')
             ->get();
 
+        $courses = Course::where('school_id', $this->school->id)
+            ->where('academic_year', $this->currentAcademicYear())
+            ->orderBy('name')
+            ->get();
+
+        $courseRatings = CourseRating::where('school_id', $this->school->id)
+            ->where('academic_year', $this->currentAcademicYear())
+            ->get()
+            ->groupBy('course_id');
+
         return [
             'recentComplaints' => $recentComplaints,
             'verifiedTeachers' => $verifiedTeachers,
@@ -91,6 +103,12 @@ new #[Layout('layouts.app')] class extends Component
             // fee register. Stated as a factual gap between two things the
             // school itself recorded, never as an allegation.
             'unbundledMandatory' => $coaching->filter(fn (CoachingProgramme $c): bool => $c->isUnbundledMandatoryCost()),
+            'courses' => $courses,
+            // Per-dimension averages per course, each carrying its own
+            // response count (spec section 12).
+            'courseAverages' => $courses->mapWithKeys(fn (Course $course): array => [
+                $course->id => CourseRating::averages($courseRatings->get($course->id, collect())),
+            ]),
         ];
     }
 }; ?>
@@ -323,6 +341,58 @@ new #[Layout('layouts.app')] class extends Component
                 </p>
             @endif
         </div>
+
+        @if ($courses->isNotEmpty())
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex flex-wrap items-baseline justify-between gap-2 mb-1">
+                    <h3 class="font-semibold text-gray-900">Courses</h3>
+                    <span class="text-xs text-gray-400">{{ $facilityYear }}</span>
+                </div>
+                <p class="text-xs text-gray-500 mb-4">
+                    Rated by verified students and parents. Each figure shows how many people answered that
+                    question — parents are only asked about things they're in a position to see, so some
+                    dimensions have fewer responses than others.
+                </p>
+
+                <div class="space-y-4">
+                    @foreach ($courses as $course)
+                        @php $rated = collect($courseAverages[$course->id])->where('responses', '>', 0); @endphp
+                        <div class="py-2 border-b last:border-0">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="text-sm font-medium text-gray-900">{{ $course->name }}</span>
+                                <span class="text-xs text-gray-400">{{ $course->typeLabel() }}</span>
+                                @if ($course->applicable_classes)
+                                    <span class="text-xs text-gray-400">&middot; classes {{ $course->applicable_classes }}</span>
+                                @endif
+                            </div>
+
+                            @if ($rated->isNotEmpty())
+                                <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-2 mt-2">
+                                    @foreach ($rated as $dimension)
+                                        <div class="flex items-baseline justify-between text-sm bg-gray-50 rounded px-2 py-1">
+                                            <span class="text-gray-600 text-xs">{{ $dimension['label'] }}</span>
+                                            <span class="text-gray-900">
+                                                {{ $dimension['average'] }}<span class="text-xs text-gray-400">/5</span>
+                                                <span class="text-xs text-gray-400">({{ $dimension['responses'] }})</span>
+                                            </span>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <p class="text-xs text-gray-400 mt-1">No ratings yet.</p>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+
+                @if ($canSubmit)
+                    <a href="{{ route('courses.rate', $school) }}" wire:navigate
+                        class="inline-block mt-4 px-4 py-2 text-sm rounded bg-indigo-600 text-white hover:bg-indigo-700">
+                        Rate a course
+                    </a>
+                @endif
+            </div>
+        @endif
 
         @if ($exams->isNotEmpty() || $coaching->isNotEmpty())
             <div class="bg-white rounded-lg shadow p-6">

@@ -97,6 +97,16 @@ class School extends Model
         return $this->hasMany(FacilityClaim::class);
     }
 
+    public function courses(): HasMany
+    {
+        return $this->hasMany(Course::class);
+    }
+
+    public function courseRatings(): HasMany
+    {
+        return $this->hasMany(CourseRating::class);
+    }
+
     public function externalExams(): HasMany
     {
         return $this->hasMany(ExternalExam::class);

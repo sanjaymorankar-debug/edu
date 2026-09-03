@@ -188,6 +188,8 @@ new #[Layout('layouts.app')] class extends Component
                         class="px-4 py-2 text-sm rounded bg-indigo-600 text-white hover:bg-indigo-700">Fees &amp; charges</a>
                     <a href="{{ route('facilities.manage', $school) }}" wire:navigate
                         class="px-4 py-2 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50">Facilities</a>
+                    <a href="{{ route('courses.manage', $school) }}" wire:navigate
+                        class="px-4 py-2 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50">Courses</a>
                     <a href="{{ route('exams.manage', $school) }}" wire:navigate
                         class="px-4 py-2 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50">Exams &amp; coaching</a>
                     <a href="{{ route('academic-records.index', $school) }}" wire:navigate

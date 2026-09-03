@@ -1,6 +1,6 @@
 # Database
 
-MySQL in production (Hostinger), SQLite for local dev. 61 tables (see `database/migrations/`).
+MySQL in production (Hostinger), SQLite for local dev. 63 tables (see `database/migrations/`).
 
 ## Core groups
 
@@ -43,6 +43,8 @@ MySQL in production (Hostinger), SQLite for local dev. 61 tables (see `database/
 **Student growth (spec §15–16):** `capability_observations` — dated, single-observer notes across five NEP 2020 domains, tagged `strength` or `growth_area`, from a teacher/parent/self/peer. **There is deliberately no score, rating or level column and there must never be one** — see [`STUDENT_GROWTH_FRAMEWORK.md`](STUDENT_GROWTH_FRAMEWORK.md). Peer rows land as `moderation_status = 'pending'` and stay invisible until a teacher clears them. `growth_plans` (one per child/school/term, with `shared_with_parent_at` gating guardian visibility) and `growth_goals` (max 3 per plan; `support_at_school` and `support_at_home` are NOT NULL, so no goal exists without a next step).
 
 **Career & life skills (spec §17):** `career_interest_profiles` — a time series of child-stated interests, appended never updated, since interests are meant to change; no assigned-pathway column exists, suggestions are computed at read time by `CareerPathwayService`. `life_skills_tracking` — participation in structured activities (`participated`/`engaged`/`led`), explicitly not a score.
+
+**Courses & curriculum ratings (spec §8, §12):** `courses` — the school's catalogue, versioned per academic year, kept separate from `facility_claims` because a school can have an excellent laboratory and a poorly-taught chemistry course. `course_ratings` — section 12's ten dimensions as named columns rather than a JSON blob, so a dimension cannot quietly appear or disappear between submissions. Anonymous (`anonymous_ref`, never `user_id`), one rating per person per course per year. Every dimension is nullable and **students see all ten while parents are asked only the six they can realistically judge** — a parent rarely sees project work, and forcing a number there would manufacture data. `CourseRating::averages()` reports a response count per dimension, since they genuinely differ.
 
 **Safeguarding (spec §25):** `safeguarding_reports` — deliberately separate from `complaints` and never joined into general reporting. Anonymised like complaints (`anonymous_ref`, no `user_id`). The `external_report_*` columns record whether the POCSO Act §19 duty was discharged *outside* this platform; `legal_duty_shown_at` records that the platform surfaced the obligation — evidence about the platform's conduct, not the reporter's. `SafeguardingService` blocks closure of a POCSO-engaging case until an external report is recorded, and has no `school_admin` branch at all, so a school's ordinary administration cannot see these cases. `safeguarding_events` is the append-only case trail, separate from `audit_logs` so a general audit reader cannot learn a named school has a case.
 

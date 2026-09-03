@@ -51,7 +51,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Volt::route('schools/{school}/fees', 'fees.manage')->name('fees.manage')->middleware('role:school_admin|system_admin');
     Volt::route('schools/{school}/facilities', 'facilities.manage')->name('facilities.manage')->middleware('role:school_admin|system_admin');
     Volt::route('schools/{school}/exams', 'exams.manage')->name('exams.manage')->middleware('role:school_admin|system_admin');
+    Volt::route('schools/{school}/courses', 'courses.manage')->name('courses.manage')->middleware('role:school_admin|system_admin');
     Volt::route('schools/{school}/facilities/rate', 'facilities.rate')->name('facilities.rate')->middleware('role:parent|student');
+    Volt::route('schools/{school}/courses/rate', 'courses.rate')->name('courses.rate')->middleware('role:parent|student');
 
     // Spec section 25. Anyone signed in may report a safeguarding concern —
     // the duty under POCSO section 19 falls on any person, so the reporting

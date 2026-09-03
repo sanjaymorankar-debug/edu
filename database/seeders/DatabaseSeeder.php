@@ -33,6 +33,7 @@ class DatabaseSeeder extends Seeder
                 FacilitySeeder::class,
                 SafeguardingSeeder::class,
                 ExamsAndCoachingSeeder::class,
+                CourseSeeder::class,
                 HealthSeeder::class,
                 BenchmarkReferenceSeeder::class,
             ]);

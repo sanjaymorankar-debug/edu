@@ -48,9 +48,6 @@ anything is labelled at all.
 
 Still open in this area:
 
-- **Course/curriculum rating dimensions (§12).** Sports and academic facilities are in the taxonomy
-  and rateable, but the course-specific dimensions (curriculum relevance, practical learning,
-  career relevance, project work) are not built.
 - **Evidence file uploads on facility claims.** `evidence_path` exists on the table; only the text
   note is wired up. Needs the same malware-scan/size-limit treatment complaint evidence gets.
 - **Per-facility, per-year score trends (§12) and the School Improvement Dashboard (§31).** The data
@@ -123,8 +120,8 @@ suppression treatment cannot drift apart between them.
 Still open in Phase 7: NAS data is not integrated (no public
 dataset wired in); and the AI-assist layer (§28) remains stubbed pending an API key.
 
-Not started from the v2 spec more broadly: multilingual rollout (§33), course/curriculum rating
-dimensions (§12), and the alumni-outcomes module (§17).
+Not started from the v2 spec more broadly: multilingual rollout (§33) and the alumni-outcomes
+module (§17).
 
 ---
 
