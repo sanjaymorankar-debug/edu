@@ -89,6 +89,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Volt::route('wellbeing/{student}/concern', 'wellbeing.concern')->name('wellbeing.concern');
     Volt::route('counselling', 'counselling.portal')->name('counselling.portal')->middleware('role:counsellor');
 
+    // Spec sections 5 and 8 - without this queue nothing on the platform ever
+    // gets verified, and an unverified state starts to read as a judgement.
+    Volt::route('verification', 'verification.queue')->name('verification.queue')
+        ->middleware('role:district_officer|state_officer|national_admin|system_admin');
+
     Volt::route('notifications', 'notifications.index')->name('notifications.index');
 
     Route::get('complaints/{complaint}/evidence/{evidence}', ComplaintEvidenceController::class)

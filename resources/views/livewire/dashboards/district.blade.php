@@ -86,6 +86,15 @@ new #[Layout('layouts.app')] class extends Component
 
         <x-health-aggregate-panel :summary="$healthSummary" scope-label="your district" />
 
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="font-semibold text-gray-900 mb-1">Verification queue</h3>
+            <p class="text-xs text-gray-500 mb-3">
+                UDISE codes and facility evidence waiting to be checked. Nothing is verified until someone here does it.
+            </p>
+            <a href="{{ route('verification.queue') }}" wire:navigate
+                class="inline-block px-4 py-2 text-sm rounded bg-indigo-600 text-white hover:bg-indigo-700">Open the verification queue</a>
+        </div>
+
         @can('handle-safeguarding-cases')
             <div class="bg-white rounded-lg shadow p-6">
                 <h3 class="font-semibold text-gray-900 mb-1">Safeguarding cases</h3>

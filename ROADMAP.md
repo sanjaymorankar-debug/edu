@@ -50,9 +50,6 @@ Still open in this area:
 
 - **Evidence file uploads on facility claims.** `evidence_path` exists on the table; only the text
   note is wired up. Needs the same malware-scan/size-limit treatment complaint evidence gets.
-- **Officer screens for verifying UDISE codes and facility evidence.** Both exist at model level
-  (`markUdiseVerified()`, `FacilityClaim::markVerified()`) with no UI behind them yet, so in
-  practice nothing gets verified without a console.
 
 ---
 
@@ -76,8 +73,6 @@ never leave the counsellor, and an append-only access log that records refusals 
 
 Still open in this area:
 
-- **Officer screens for verifying UDISE codes and facility evidence** (carried over from Phase 5 —
-  still model-level only).
 - **Document uploads on health records (§18, §21).** The spec asks for malware-scanned,
   access-controlled medical reports served outside public URLs. Not built; records are structured
   fields only.
