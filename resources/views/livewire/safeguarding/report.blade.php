@@ -32,6 +32,8 @@ new #[Layout('layouts.app')] class extends Component
 
     public bool $submittedEngagesPocso = false;
 
+    public int $notifiedCount = 0;
+
     public function mount(School $school): void
     {
         $this->school = $school;
@@ -81,6 +83,10 @@ new #[Layout('layouts.app')] class extends Component
         // The reporter was shown the duty above the form; record that.
         $service->recordLegalDutyShown($report);
 
+        // Push the case at the people who can act, rather than waiting for
+        // someone to open the queue.
+        $this->notifiedCount = $service->notifyResponsibleOfficers($report);
+
         $this->submittedReference = $report->reference;
         $this->submittedEngagesPocso = $report->engagesPocsoDuty();
 
@@ -124,6 +130,23 @@ new #[Layout('layouts.app')] class extends Component
                         <li>Your district's Special Juvenile Police Unit or Child Welfare Committee</li>
                     </ul>
                 </div>
+                {{-- Say honestly whether anyone was actually alerted. A school
+                     with no Child Safety Officer configured is a real state,
+                     and telling the reporter "it's been sent" when nobody was
+                     notified would be a comfortable lie. --}}
+                @if ($notifiedCount > 0)
+                    <p class="text-sm text-gray-700 mt-3">
+                        {{ $notifiedCount }} {{ Str::plural('officer', $notifiedCount) }} responsible for child
+                        safety {{ $notifiedCount === 1 ? 'has' : 'have' }} been notified.
+                    </p>
+                @else
+                    <p class="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded p-3 mt-3">
+                        <strong>No child safety officer is currently set up to receive this.</strong> Your report
+                        is recorded and cannot be deleted, but nobody has been alerted automatically. Please
+                        contact the police or Childline on 1098 directly.
+                    </p>
+                @endif
+
                 <p class="text-xs text-gray-500 mt-3">
                     This report is not public, does not appear on the school's profile, and does not affect any
                     rating or score.

@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\AnalyticsSnapshot;
+use App\Services\HealthAggregateService;
 use Illuminate\Support\Facades\Artisan;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -42,6 +43,10 @@ new #[Layout('layouts.app')] class extends Component
             'byState' => collect($metrics['by_state']),
             'openRetaliation' => $metrics['open_retaliation'],
             'calculatedAt' => $snapshot->calculated_at,
+            // Spec sections 20, 32 — anonymised aggregates only. Computed live
+            // rather than from the snapshot, since the small-cell suppression
+            // has to be applied at read time to stay correct.
+            'healthSummary' => app(HealthAggregateService::class)->summary('national'),
         ];
     }
 }; ?>
@@ -86,6 +91,8 @@ new #[Layout('layouts.app')] class extends Component
                 <div class="text-xs text-gray-500">Open Retaliation Reports</div>
             </div>
         </div>
+
+        <x-health-aggregate-panel :summary="$healthSummary" scope-label="the country" />
 
         <div class="bg-white rounded-lg shadow p-6">
             <div class="flex justify-between items-center mb-4">

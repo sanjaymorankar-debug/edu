@@ -6,6 +6,7 @@ use App\Models\SafeguardingEvent;
 use App\Models\SafeguardingReport;
 use App\Models\SchoolStaff;
 use App\Models\User;
+use App\Notifications\SafeguardingCaseRaised;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -74,6 +75,52 @@ class SafeguardingService
     public function canManage(User $user, SafeguardingReport $report): bool
     {
         return $this->canView($user, $report);
+    }
+
+    /**
+     * Tell the people who can act that a case exists.
+     *
+     * Recipients are exactly the audience `canView()` allows for this case —
+     * the school's Child Safety Officers and the officers whose jurisdiction
+     * covers it — never the school's ordinary administration. The notification
+     * itself carries no detail of the concern; see SafeguardingCaseRaised.
+     *
+     * Without this the queue is a page somebody has to remember to open, which
+     * for an immediate-danger case is not good enough.
+     *
+     * @return int how many people were notified
+     */
+    public function notifyResponsibleOfficers(SafeguardingReport $report): int
+    {
+        $schoolOfficerIds = SchoolStaff::where('school_id', $report->school_id)->pluck('user_id');
+
+        $recipients = User::query()
+            ->where(function ($query) use ($schoolOfficerIds, $report): void {
+                $query->where(function ($q) use ($schoolOfficerIds): void {
+                    $q->whereIn('id', $schoolOfficerIds)
+                        ->whereHas('roles', fn ($r) => $r->where('name', 'child_safety_officer'));
+                })->orWhereHas('officerJurisdictions', function ($j) use ($report): void {
+                    $j->where('district_id', $report->district_id)
+                        ->orWhere('state_id', $report->state_id);
+                });
+            })
+            ->get()
+            // Belt and braces: re-check each recipient against the same access
+            // rule that governs the case page, so a jurisdiction row alone
+            // cannot leak a notification to someone who could not open it.
+            ->filter(fn (User $user): bool => $this->canView($user, $report));
+
+        foreach ($recipients as $recipient) {
+            $recipient->notify(new SafeguardingCaseRaised($report));
+        }
+
+        if ($recipients->isNotEmpty()) {
+            $this->log($report, 'assigned', null,
+                'Notified '.$recipients->count().' responsible '
+                    .($recipients->count() === 1 ? 'officer' : 'officers').'.');
+        }
+
+        return $recipients->count();
     }
 
     /**

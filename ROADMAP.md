@@ -51,7 +51,6 @@ Still open in this area:
 - **Course/curriculum rating dimensions (§12).** Sports and academic facilities are in the taxonomy
   and rateable, but the course-specific dimensions (curriculum relevance, practical learning,
   career relevance, project work) are not built.
-- **External exams & coaching (§10).** Not started — no tables yet.
 - **Evidence file uploads on facility claims.** `evidence_path` exists on the table; only the text
   note is wired up. Needs the same malware-scan/size-limit treatment complaint evidence gets.
 - **Per-facility, per-year score trends (§12) and the School Improvement Dashboard (§31).** The data
@@ -94,8 +93,6 @@ Still open in this area:
   unused; the portal is driven by the observation queue instead.
 - **Retention and erasure schedules (§21, §40).** Consent withdrawal hides data; per-category
   retention periods and secure deletion are not implemented.
-- **Safeguarding notifications.** Cases reach the queue but nobody is alerted — an immediate-danger
-  case relies on someone opening the page.
 
 ---
 
@@ -120,10 +117,10 @@ reference list; they have not been verified against the originals.
 Aggregate health and wellbeing statistics for government (§20, §32) are now computed by
 `HealthAggregateService` with small-cell suppression, closing the gap where the access matrix
 correctly gave officers nothing individual but nothing anonymised either. They surface on the
-District Officer dashboard.
+District, State and National dashboards through one shared component, so the wording and the
+suppression treatment cannot drift apart between them.
 
-Still open in Phase 7: the same aggregates are not yet on the State and National dashboards (the
-service supports the scope; the panels are not wired); NAS data is not integrated (no public
+Still open in Phase 7: NAS data is not integrated (no public
 dataset wired in); and the AI-assist layer (§28) remains stubbed pending an API key.
 
 Not started from the v2 spec more broadly: multilingual rollout (§33), course/curriculum rating

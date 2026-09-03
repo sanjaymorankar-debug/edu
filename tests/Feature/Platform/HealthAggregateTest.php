@@ -312,6 +312,30 @@ class HealthAggregateTest extends TestCase
         }
     }
 
+    public function test_the_state_and_national_dashboards_show_the_same_aggregates(): void
+    {
+        $students = $this->enrolStudents(20);
+
+        foreach ($students as $student) {
+            $this->screen($student);
+        }
+
+        $stateOfficer = $this->makeStateOfficer($this->school);
+
+        Volt::actingAs($stateOfficer)->test('dashboards.state')
+            ->assertOk()
+            ->assertSee('Students screened this year')
+            ->assertSee('No individual child');
+
+        $nationalAdmin = User::factory()->create();
+        $nationalAdmin->assignRole('national_admin');
+
+        Volt::actingAs($nationalAdmin)->test('dashboards.national')
+            ->assertOk()
+            ->assertSee('Students screened this year')
+            ->assertSee('No individual child');
+    }
+
     public function test_a_higher_counselling_rate_is_not_framed_as_a_bad_outcome(): void
     {
         $this->enrolStudents(20);

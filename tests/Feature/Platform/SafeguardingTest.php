@@ -376,6 +376,131 @@ class SafeguardingTest extends TestCase
             ->assertSee('1098');
     }
 
+    // ---------------------------------------------------------------
+    //  Cases must reach a person, not just a queue
+    // ---------------------------------------------------------------
+
+    public function test_submitting_notifies_the_schools_child_safety_officer(): void
+    {
+        $school = $this->makeSchool();
+        $officer = $this->makeChildSafetyOfficer($school);
+        $parent = $this->makeVerifiedParent($school);
+
+        Volt::actingAs($parent)->test('safeguarding.report', ['school' => $school])
+            ->set('category', 'child_sexual_abuse')
+            ->set('description', 'A detailed account of the concern, long enough to pass validation.')
+            ->set('understoodLegalDuty', true)
+            ->call('submit');
+
+        $this->assertSame(1, $officer->notifications()->count());
+    }
+
+    public function test_the_district_officer_in_jurisdiction_is_also_notified(): void
+    {
+        $school = $this->makeSchool();
+        $districtOfficer = $this->makeDistrictOfficer($school);
+        $report = $this->makeReport($school);
+
+        $notified = app(SafeguardingService::class)->notifyResponsibleOfficers($report);
+
+        $this->assertGreaterThanOrEqual(1, $notified);
+        $this->assertSame(1, $districtOfficer->notifications()->count());
+    }
+
+    /** The school's ordinary administration must not be told either. */
+    public function test_the_school_admin_is_never_notified(): void
+    {
+        $school = $this->makeSchool();
+        $schoolAdmin = $this->makeSchoolAdmin($school);
+        $this->makeChildSafetyOfficer($school);
+        $report = $this->makeReport($school);
+
+        app(SafeguardingService::class)->notifyResponsibleOfficers($report);
+
+        $this->assertSame(0, $schoolAdmin->notifications()->count());
+    }
+
+    public function test_an_officer_outside_the_jurisdiction_is_not_notified(): void
+    {
+        $school = $this->makeSchool();
+        $outsideOfficer = $this->makeDistrictOfficer($this->makeSchool());
+        $report = $this->makeReport($school);
+
+        app(SafeguardingService::class)->notifyResponsibleOfficers($report);
+
+        $this->assertSame(0, $outsideOfficer->notifications()->count());
+    }
+
+    /**
+     * A notification row is readable from a list view, so it must not carry
+     * the substance of an allegation about a child.
+     */
+    public function test_the_notification_carries_no_detail_of_the_concern(): void
+    {
+        $school = $this->makeSchool();
+        $officer = $this->makeChildSafetyOfficer($school);
+        $report = $this->makeReport($school, [
+            'description' => 'A SENSITIVE-DETAIL-zzqq account of what happened.',
+            'anonymous_ref' => 'ANON-SECRETREF99',
+        ]);
+
+        app(SafeguardingService::class)->notifyResponsibleOfficers($report);
+
+        $payload = json_encode($officer->notifications()->first()->data);
+
+        $this->assertStringNotContainsString('SENSITIVE-DETAIL-zzqq', $payload);
+        $this->assertStringNotContainsString('ANON-SECRETREF99', $payload);
+        $this->assertStringContainsString($report->reference, $payload);
+    }
+
+    public function test_an_immediate_danger_case_is_marked_urgent(): void
+    {
+        $school = $this->makeSchool();
+        $officer = $this->makeChildSafetyOfficer($school);
+        $report = $this->makeReport($school, ['immediate_danger' => true]);
+
+        app(SafeguardingService::class)->notifyResponsibleOfficers($report);
+
+        $data = $officer->notifications()->first()->data;
+
+        $this->assertTrue($data['immediate_danger']);
+        $this->assertStringContainsString('Urgent', $data['message']);
+    }
+
+    /**
+     * Telling a reporter their concern was sent when nobody was actually
+     * alerted would be a comfortable lie. A school with no Child Safety
+     * Officer configured is a real state and the page says so.
+     */
+    public function test_a_reporter_is_told_when_nobody_was_alerted(): void
+    {
+        $school = $this->makeSchool();
+        $parent = $this->makeVerifiedParent($school);
+
+        Volt::actingAs($parent)->test('safeguarding.report', ['school' => $school])
+            ->set('category', 'physical_abuse')
+            ->set('description', 'A detailed account of the concern, long enough to pass validation.')
+            ->set('understoodLegalDuty', true)
+            ->call('submit')
+            ->assertSee('No child safety officer is currently set up')
+            ->assertSee('1098');
+    }
+
+    public function test_notifying_is_recorded_in_the_case_trail(): void
+    {
+        $school = $this->makeSchool();
+        $this->makeChildSafetyOfficer($school);
+        $report = $this->makeReport($school);
+
+        app(SafeguardingService::class)->notifyResponsibleOfficers($report);
+
+        $this->assertTrue(
+            SafeguardingEvent::where('safeguarding_report_id', $report->id)
+                ->where('event_type', 'assigned')
+                ->exists()
+        );
+    }
+
     public function test_an_unauthorised_user_cannot_act_on_a_case(): void
     {
         $school = $this->makeSchool();

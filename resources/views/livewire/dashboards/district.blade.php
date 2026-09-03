@@ -84,37 +84,7 @@ new #[Layout('layouts.app')] class extends Component
             </div>
         </div>
 
-        {{-- Spec sections 20 and 32: aggregated and anonymised only. Figures
-             computed from fewer than ten records are withheld with a reason
-             rather than published, because a percentage drawn from three
-             children identifies them to anyone local. --}}
-        <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="font-semibold text-gray-900 mb-1">Health &amp; wellbeing in your district</h3>
-            <p class="text-xs text-gray-500 mb-4">
-                Aggregate figures only. No individual child's health, wellbeing or counselling record is
-                accessible from any government view.
-            </p>
-
-            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                @foreach ($healthSummary as $metric)
-                    <div class="rounded p-4 {{ $metric['suppressed'] ? 'bg-gray-50' : 'bg-indigo-50' }}">
-                        <div class="text-xs {{ $metric['suppressed'] ? 'text-gray-600' : 'text-indigo-700' }}">
-                            {{ $metric['label'] }}
-                        </div>
-                        <div class="text-xl font-bold {{ $metric['suppressed'] ? 'text-gray-400' : 'text-indigo-900' }}">
-                            @if ($metric['suppressed'])
-                                <span class="text-sm font-normal">Withheld</span>
-                            @else
-                                {{ $metric['value'] }}{{ $metric['unit'] }}
-                            @endif
-                        </div>
-                        <div class="text-xs {{ $metric['suppressed'] ? 'text-gray-500' : 'text-indigo-700' }} mt-1">
-                            {{ $metric['note'] }}
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-        </div>
+        <x-health-aggregate-panel :summary="$healthSummary" scope-label="your district" />
 
         @can('handle-safeguarding-cases')
             <div class="bg-white rounded-lg shadow p-6">

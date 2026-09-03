@@ -6,6 +6,7 @@ use App\Models\District;
 use App\Models\OfficerJurisdiction;
 use App\Models\RetaliationReport;
 use App\Models\School;
+use App\Services\HealthAggregateService;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
@@ -71,7 +72,11 @@ new #[Layout('layouts.app')] class extends Component
             ->limit(20)
             ->get();
 
-        return compact('complaints', 'stats', 'byDistrict', 'retaliationReports', 'pendingSchools', 'calculatedAt');
+        // Spec sections 20, 32 — anonymised aggregates, suppressed below the
+        // small-cell floor inside the service.
+        $healthSummary = app(HealthAggregateService::class)->summary('state', $stateIds->first());
+
+        return compact('complaints', 'stats', 'byDistrict', 'retaliationReports', 'pendingSchools', 'calculatedAt', 'healthSummary');
     }
 }; ?>
 
@@ -111,6 +116,8 @@ new #[Layout('layouts.app')] class extends Component
                 <div class="text-xs text-gray-500">Schools Pending Verification</div>
             </div>
         </div>
+
+        <x-health-aggregate-panel :summary="$healthSummary" scope-label="your state" />
 
         <div class="bg-white rounded-lg shadow p-6">
             <h3 class="font-semibold text-gray-900 mb-4">Complaints by District</h3>
