@@ -57,6 +57,23 @@ class UserSeeder extends Seeder
         ]);
         $researcher->assignRole('researcher');
 
+        // Spec section 6 roles 7 and 17. Both roles existed with no account to
+        // log in as, which meant the consent/data-rights and career-mentor
+        // screens could not actually be opened in the demo.
+        $dpo = User::factory()->create([
+            'name' => 'Data Protection Officer (Demo)',
+            'email' => 'dpo@test.agtci.com',
+            'password' => Hash::make(self::DEMO_PASSWORD),
+        ]);
+        $dpo->assignRole('data_protection_officer');
+
+        $careerMentor = User::factory()->create([
+            'name' => 'Career & Life-Skills Mentor (Demo)',
+            'email' => 'career.mentor@test.agtci.com',
+            'password' => Hash::make(self::DEMO_PASSWORD),
+        ]);
+        $careerMentor->assignRole('career_mentor');
+
         foreach (State::all() as $state) {
             $officer = User::factory()->create([
                 'name' => "State Officer - {$state->name} (Demo)",
@@ -85,6 +102,14 @@ class UserSeeder extends Seeder
         ]);
         $demoAdmin->assignRole('school_admin');
         SchoolStaff::create(['user_id' => $demoAdmin->id, 'school_id' => $demoSchool->id, 'designation' => 'Principal']);
+
+        // The mentor needs a staff assignment at the demo school, or every
+        // per-child access check refuses them and the role is unusable.
+        SchoolStaff::create([
+            'user_id' => $careerMentor->id,
+            'school_id' => $demoSchool->id,
+            'designation' => 'Career & Life-Skills Mentor',
+        ]);
 
         $demoParent = User::factory()->create([
             'name' => 'Parent (Demo)',
