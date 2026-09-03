@@ -262,6 +262,62 @@ class ClaimedVsExperiencedTest extends TestCase
         $this->assertNotNull($claim->fresh()->verified_at);
     }
 
+    /**
+     * A school must learn about a reported gap on its own dashboard, not from
+     * its public profile — that is where section 29's right of reply starts.
+     */
+    public function test_the_school_sees_reported_gaps_on_its_own_facilities_page(): void
+    {
+        $school = $this->makeSchool();
+        $admin = $this->makeSchoolAdmin($school);
+        $this->claim($school, $admin, 'swimming');
+
+        foreach (['A', 'B', 'C'] as $ref) {
+            $this->rate($school, 'not_available', 'ANON-'.$ref, 'swimming');
+        }
+
+        Volt::actingAs($admin)->test('facilities.manage', ['school' => $school])
+            ->set('academicYear', self::YEAR)
+            ->assertOk()
+            ->assertSee('Families are reporting something different')
+            ->assertSee('Swimming')
+            // The framing rule: reported, not proven.
+            ->assertSee('not a finding against your school');
+    }
+
+    public function test_a_school_with_no_reported_gaps_sees_no_warning_panel(): void
+    {
+        $school = $this->makeSchool();
+        $admin = $this->makeSchoolAdmin($school);
+        $this->claim($school, $admin, 'library');
+
+        foreach (['A', 'B', 'C'] as $ref) {
+            $this->rate($school, 'available', 'ANON-'.$ref, 'library');
+        }
+
+        Volt::actingAs($admin)->test('facilities.manage', ['school' => $school])
+            ->set('academicYear', self::YEAR)
+            ->assertOk()
+            ->assertDontSee('Families are reporting something different');
+    }
+
+    /** The public profile must show the comparison, not just the claim. */
+    public function test_the_public_profile_shows_the_comparison(): void
+    {
+        $school = $this->makeSchool();
+        $admin = $this->makeSchoolAdmin($school);
+        $this->claim($school, $admin, 'swimming');
+
+        foreach (['A', 'B', 'C'] as $ref) {
+            $this->rate($school, 'not_available', 'ANON-'.$ref, 'swimming');
+        }
+
+        Volt::test('schools.show', ['school' => $school])
+            ->assertOk()
+            ->assertSee('Significant discrepancy reported')
+            ->assertSee('reported difference');
+    }
+
     public function test_the_taxonomy_is_shared_by_claims_and_ratings(): void
     {
         // Section 12's requirement: one canonical list, or the comparison is
