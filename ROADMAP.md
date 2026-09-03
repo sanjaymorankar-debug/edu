@@ -90,10 +90,6 @@ Still open in this area:
 - **Document uploads on health records (§18, §21).** The spec asks for malware-scanned,
   access-controlled medical reports served outside public URLs. Not built; records are structured
   fields only.
-- **Aggregate health/wellbeing statistics for government dashboards (§32).** The access matrix
-  correctly gives officers nothing individual, but the aggregate counts that should replace it
-  aren't computed yet — so officers currently see no health data at all rather than anonymised
-  totals.
 - **A counsellor caseload view.** `HealthAccessService::caseloadStudentIds()` exists and is
   unused; the portal is driven by the observation queue instead.
 - **Retention and erasure schedules (§21, §40).** Consent withdrawal hides data; per-category
@@ -121,10 +117,14 @@ false` and the page says so. Someone has to check each reference against the act
 source and set the flag. The rows describe structural practice drawn from the specification's own
 reference list; they have not been verified against the originals.
 
-Still open in Phase 7: aggregate health/wellbeing statistics for government dashboards (§32) — the
-access matrix correctly gives officers nothing individual, but the anonymised totals that should
-replace it are not computed yet; NAS data is not integrated (no public dataset wired in); and the
-AI-assist layer (§28) remains stubbed pending an API key.
+Aggregate health and wellbeing statistics for government (§20, §32) are now computed by
+`HealthAggregateService` with small-cell suppression, closing the gap where the access matrix
+correctly gave officers nothing individual but nothing anonymised either. They surface on the
+District Officer dashboard.
+
+Still open in Phase 7: the same aggregates are not yet on the State and National dashboards (the
+service supports the scope; the panels are not wired); NAS data is not integrated (no public
+dataset wired in); and the AI-assist layer (§28) remains stubbed pending an API key.
 
 Not started from the v2 spec more broadly: multilingual rollout (§33), course/curriculum rating
 dimensions (§12), and the alumni-outcomes module (§17).
