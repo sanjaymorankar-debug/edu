@@ -152,6 +152,12 @@ new #[Layout('layouts.app')] class extends Component
         return [
             'schools' => School::orderBy('name')->get(['id', 'name', 'city']),
             'categories' => ComplaintCategory::where('is_active', true)->orderBy('name')->get(),
+            // Spec section 25 — when a case touching child safety is flagged,
+            // the legal obligation has to be presented immediately, not after
+            // the complaint has been filed down the ordinary route.
+            'selectedIsChildSafety' => $this->complaintCategoryId
+                ? (bool) ComplaintCategory::whereKey($this->complaintCategoryId)->value('is_child_safety')
+                : false,
         ];
     }
 }; ?>
@@ -183,7 +189,7 @@ new #[Layout('layouts.app')] class extends Component
 
                 <div>
                     <x-input-label for="complaintCategoryId" value="Category" />
-                    <select wire:model="complaintCategoryId" id="complaintCategoryId" class="border-gray-300 rounded-md shadow-sm mt-1 w-full">
+                    <select wire:model.live="complaintCategoryId" id="complaintCategoryId" class="border-gray-300 rounded-md shadow-sm mt-1 w-full">
                         <option value="">Select category</option>
                         @foreach ($categories as $category)
                             <option value="{{ $category->id }}">{{ $category->name }}</option>
@@ -195,6 +201,31 @@ new #[Layout('layouts.app')] class extends Component
                             Based on your description, this might be "{{ $suggestedCategoryName }}" —
                             <button type="button" wire:click="applySuggestedCategory" class="underline">use this</button>
                         </p>
+                    @endif
+
+                    {{-- Spec section 25: a serious concern about a child must not
+                         quietly proceed down the ordinary complaint route. --}}
+                    @if ($selectedIsChildSafety)
+                        <div class="mt-3 bg-red-50 border-l-4 border-red-500 rounded p-4">
+                            <h4 class="text-sm font-semibold text-red-900 mb-1">Is a child at risk of harm?</h4>
+                            <p class="text-sm text-red-900 mb-2">
+                                If this involves abuse, violence, or a child in danger, please use the safeguarding
+                                route instead. It goes straight to the Child Safety Officer rather than the
+                                school's administration, and it will not appear publicly.
+                            </p>
+                            <p class="text-sm text-red-900 mb-3">
+                                If a child has been sexually abused, section 19 of the POCSO Act 2012 requires a
+                                report to the <strong>police or the Special Juvenile Police Unit</strong>. That duty
+                                is independent of this platform — filing anything here does not discharge it.
+                                Childline is <strong>1098</strong>, free and 24 hours.
+                            </p>
+                            @if ($schoolId)
+                                <a href="{{ route('safeguarding.report', $schoolId) }}" wire:navigate
+                                    class="inline-block px-4 py-2 text-sm rounded bg-red-600 text-white hover:bg-red-700">
+                                    Report a serious concern about a child
+                                </a>
+                            @endif
+                        </div>
                     @endif
                 </div>
 

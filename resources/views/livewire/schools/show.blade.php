@@ -132,6 +132,11 @@ new #[Layout('layouts.app')] class extends Component
                 <div class="mt-4 flex gap-3">
                     <a href="{{ route('complaints.create', ['school' => $school->id]) }}" wire:navigate
                         class="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700">Report a Problem</a>
+                    {{-- Spec section 25: a separate, unmissable route. A concern
+                         about a child's safety must not have to travel through
+                         the general complaint queue to be seen. --}}
+                    <a href="{{ route('safeguarding.report', $school) }}" wire:navigate
+                        class="inline-flex items-center px-4 py-2 border-2 border-red-600 text-red-700 text-sm rounded-md hover:bg-red-50">Report a concern about a child's safety</a>
                     <a href="{{ route('feedback.create', $school) }}" wire:navigate
                         class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700">Rate this School</a>
                 </div>

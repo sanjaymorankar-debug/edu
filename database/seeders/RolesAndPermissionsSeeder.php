@@ -46,6 +46,12 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage-growth-plan',
             'record-life-skills',
             'manage-consent',
+            // Spec section 25. Note there is deliberately no
+            // "close-safeguarding-case" permission separate from this one:
+            // whether a case may be closed depends on the case (has an
+            // external report been recorded?), not on the holder's role, and
+            // SafeguardingService enforces that.
+            'handle-safeguarding-cases',
         ];
 
         foreach ($permissions as $permission) {
@@ -58,10 +64,17 @@ class RolesAndPermissionsSeeder extends Seeder
             'student' => ['submit-complaint', 'submit-feedback', 'view-own-complaints', 'record-capability-observation'],
             'teacher' => ['view-own-complaints', 'record-capability-observation', 'manage-growth-plan', 'record-life-skills'],
             'career_mentor' => ['record-life-skills', 'record-capability-observation'],
+            // Note school_admin does NOT hold handle-safeguarding-cases, and
+            // must not: spec section 25 and POCSO section 19 mean a school's
+            // ordinary administration is not the venue for these cases. The
+            // school-side role that does hold it is child_safety_officer.
             'school_admin' => ['respond-to-complaint', 'manage-school-profile'],
-            'district_officer' => ['review-district-complaints', 'access-protected-identity'],
-            'state_officer' => ['review-state-complaints', 'access-protected-identity', 'view-national-analytics'],
-            'national_admin' => ['review-state-complaints', 'access-protected-identity', 'view-audit-logs', 'view-national-analytics'],
+            // Spec section 6 role 10 — receives and tracks mandatory-reporting
+            // escalations and cannot be bypassed on safeguarding cases.
+            'child_safety_officer' => ['handle-safeguarding-cases'],
+            'district_officer' => ['review-district-complaints', 'access-protected-identity', 'handle-safeguarding-cases'],
+            'state_officer' => ['review-state-complaints', 'access-protected-identity', 'view-national-analytics', 'handle-safeguarding-cases'],
+            'national_admin' => ['review-state-complaints', 'access-protected-identity', 'view-audit-logs', 'view-national-analytics', 'handle-safeguarding-cases'],
             'researcher' => ['view-national-analytics'],
             // Spec section 6 role 17 — owns consent records and data-subject
             // requests under DPDP. Auditing consent is not the same as reading

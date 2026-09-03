@@ -49,6 +49,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Volt::route('schools/{school}/facilities', 'facilities.manage')->name('facilities.manage')->middleware('role:school_admin|system_admin');
     Volt::route('schools/{school}/facilities/rate', 'facilities.rate')->name('facilities.rate')->middleware('role:parent|student');
 
+    // Spec section 25. Anyone signed in may report a safeguarding concern —
+    // the duty under POCSO section 19 falls on any person, so the reporting
+    // route is deliberately not restricted by role. Handling them is.
+    Volt::route('schools/{school}/safeguarding/report', 'safeguarding.report')->name('safeguarding.report');
+    Volt::route('safeguarding', 'safeguarding.queue')->name('safeguarding.queue')->middleware('can:handle-safeguarding-cases');
+    Volt::route('safeguarding/{report}', 'safeguarding.show')->name('safeguarding.show')->middleware('can:handle-safeguarding-cases');
+
     // Student growth, career and life readiness (spec sections 15-17).
     // These routes carry no role middleware on purpose: who may open a given
     // child's record is decided per child by DevelopmentAccessService inside
