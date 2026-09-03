@@ -10,6 +10,9 @@ Volt::route('schools', 'schools.index')->name('schools.index');
 Volt::route('schools/register', 'schools.register')->name('schools.register');
 Volt::route('schools/{school}', 'schools.show')->name('schools.show');
 
+// Spec section 3 - public, and deliberately reachable without an account.
+Volt::route('how-india-compares', 'benchmarks.index')->name('benchmarks.index');
+
 // Accessible to guests and authenticated users alike — an invitation link
 // is often the recipient's very first visit to the site.
 Volt::route('invitations/{token}', 'invitations.show')->name('invitations.show');

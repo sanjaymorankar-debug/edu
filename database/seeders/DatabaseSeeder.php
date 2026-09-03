@@ -34,6 +34,7 @@ class DatabaseSeeder extends Seeder
                 SafeguardingSeeder::class,
                 ExamsAndCoachingSeeder::class,
                 HealthSeeder::class,
+                BenchmarkReferenceSeeder::class,
             ]);
         });
     }

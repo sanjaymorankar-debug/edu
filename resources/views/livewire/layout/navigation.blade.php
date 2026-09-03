@@ -49,6 +49,9 @@ new class extends Component
                     <x-nav-link :href="route('schools.register')" :active="request()->routeIs('schools.register')" wire:navigate>
                         {{ __('Register a School') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('benchmarks.index')" :active="request()->routeIs('benchmarks.index')" wire:navigate>
+                        {{ __('How India Compares') }}
+                    </x-nav-link>
                 </div>
             </div>
 
@@ -117,6 +120,9 @@ new class extends Component
             @endauth
             <x-responsive-nav-link :href="route('schools.index')" :active="request()->routeIs('schools.index')" wire:navigate>
                 {{ __('Find School') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('benchmarks.index')" :active="request()->routeIs('benchmarks.index')" wire:navigate>
+                {{ __('How India Compares') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('schools.register')" :active="request()->routeIs('schools.register')" wire:navigate>
                 {{ __('Register a School') }}

@@ -1,6 +1,6 @@
 # Database
 
-MySQL in production (Hostinger), SQLite for local dev. 60 tables (see `database/migrations/`).
+MySQL in production (Hostinger), SQLite for local dev. 61 tables (see `database/migrations/`).
 
 ## Core groups
 
@@ -49,6 +49,8 @@ MySQL in production (Hostinger), SQLite for local dev. 60 tables (see `database/
 **External exams & coaching (spec §10):** `external_exams` and `coaching_programmes`, versioned per academic year. `is_mandatory` + `bundled_into_school_fees` on a coaching programme are what let the public profile show a compulsory cost sitting outside the published fee register — a factual gap between two things the school itself recorded, never an allegation. `during_school_hours` counts as effectively compulsory regardless of label.
 
 **Health & wellbeing (spec §18–21):** all gated behind DPDP §9 consent (`physical_health`, `mental_wellbeing` purposes) via `HealthAccessService`. `physical_health_records` — one row per examination, never overwritten, so the record is a history. `wellbeing_concerns` — **teacher** observations, with no diagnosis, severity, risk or treatment column, deliberately a *separate table* from `counselling_sessions` so a shared table can't put a teacher's opinion where a clinical note belongs (§19's hard rule, enforced at the data model; a schema test guards it). `counselling_sessions` — the stricter tier: `session_notes` is counsellor-only, `shareable_summary` is what a guardian sees and is written deliberately rather than extracted. `health_followups` — §21's identified → referred → follow_up → completed → closed lifecycle. `health_access_logs` — append-only, records refused attempts as well as successful ones. `HealthAccessService` has no government branch: officers get aggregates only.
+
+**International benchmarking (spec §3):** `benchmark_references` — sourced, dated descriptions of what high-performing systems *do*. **The table has no score, rank or numeric column of any kind**, which is rule 44 ("never fabricate an international benchmark score India has not produced") enforced by the schema rather than by policy; a test asserts none is ever added. `source_verified` defaults to false and the public page says so, rather than implying citations have been checked when they have not. `BenchmarkService` keeps platform-measured numbers and structural practice as separately typed structures so a view cannot render one as the other, and flags any measure whose coverage is too thin to read as representative.
 
 **Notifications:** `notifications` — Laravel's standard database-notification table (uuid id, polymorphic `notifiable`, json `data`, `read_at`). Written to by `App\Notifications\*` classes on relationship-approval, complaint-status-change, invitation-acceptance, and appeal-decision events.
 

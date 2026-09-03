@@ -101,9 +101,33 @@ Still open in this area:
 - **Safeguarding notifications.** Cases reach the queue but nobody is alerted — an immediate-danger
   case relies on someone opening the page.
 
-Not started from the v2 spec more broadly: multilingual rollout (§33), the international
-benchmarking view (§3), course/curriculum rating dimensions (§12), and the alumni-outcomes module
-(§17).
+---
+
+## Phase 7 (partial) — International benchmarking
+
+Spec section 3, the "How India Compares" view. Built as a **structural and aggregate** comparison
+layer, never a score table.
+
+- `benchmark_references` has no score, rank or numeric column at all — rule 44 enforced by the
+  schema rather than by policy, with a test asserting none is ever added.
+- The page leads with "There is no Indian PISA score on this page" rather than burying the
+  limitation, and states plainly what it deliberately does not do.
+- Platform-measured numbers and structural practice are separately typed and separately rendered,
+  each measure carrying its provenance and coverage. With ~20 seeded schools every percentage is
+  flagged "too little data to read as representative", which is the correct behaviour, not a bug.
+
+**Needs a human before this goes public:** every seeded citation lands with `source_verified =
+false` and the page says so. Someone has to check each reference against the actual published
+source and set the flag. The rows describe structural practice drawn from the specification's own
+reference list; they have not been verified against the originals.
+
+Still open in Phase 7: aggregate health/wellbeing statistics for government dashboards (§32) — the
+access matrix correctly gives officers nothing individual, but the anonymised totals that should
+replace it are not computed yet; NAS data is not integrated (no public dataset wired in); and the
+AI-assist layer (§28) remains stubbed pending an API key.
+
+Not started from the v2 spec more broadly: multilingual rollout (§33), course/curriculum rating
+dimensions (§12), and the alumni-outcomes module (§17).
 
 ---
 
