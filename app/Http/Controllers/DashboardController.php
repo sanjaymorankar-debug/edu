@@ -24,6 +24,8 @@ class DashboardController extends Controller
             // Like the Child Safety Officer, a counsellor's work is one queue
             // rather than a general dashboard.
             $user->hasRole('counsellor') => redirect()->route('counselling.portal'),
+            // The DPO's work is the request queue.
+            $user->hasRole('data_protection_officer') => redirect()->route('privacy.queue'),
             $user->hasRole('district_officer') => redirect()->route('dashboard.district'),
             $user->hasRole('state_officer') => redirect()->route('dashboard.state'),
             $user->hasRole('national_admin') => redirect()->route('dashboard.national'),

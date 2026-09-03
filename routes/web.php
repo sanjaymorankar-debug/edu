@@ -94,6 +94,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Volt::route('verification', 'verification.queue')->name('verification.queue')
         ->middleware('role:district_officer|state_officer|national_admin|system_admin');
 
+    // Spec sections 21 and 40 - DPDP data-subject rights. The request form is
+    // open to any signed-in user; who they may ask about is decided per
+    // subject inside the service, not by a role.
+    Volt::route('privacy/requests', 'privacy.requests')->name('privacy.requests');
+    Volt::route('privacy/queue', 'privacy.queue')->name('privacy.queue')
+        ->middleware('role:data_protection_officer|system_admin');
+
     Volt::route('notifications', 'notifications.index')->name('notifications.index');
 
     Route::get('complaints/{complaint}/evidence/{evidence}', ComplaintEvidenceController::class)
