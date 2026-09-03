@@ -152,7 +152,7 @@ new #[Layout('layouts.app')] class extends Component
     <div class="py-8 max-w-4xl mx-auto sm:px-6 lg:px-8 space-y-6">
 
         @if ($flash)
-            <div class="bg-green-50 border border-green-200 text-green-800 rounded-lg p-4 text-sm">{{ $flash }}</div>
+            <div role="status" aria-live="polite" class="bg-green-50 border border-green-200 text-green-800 rounded-lg p-4 text-sm">{{ $flash }}</div>
         @endif
 
         <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-4 text-sm text-indigo-900">

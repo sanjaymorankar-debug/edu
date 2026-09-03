@@ -93,6 +93,27 @@ Still open in this area:
 
 ---
 
+## Phase 8 (partial) — Accessibility
+
+Spec section 33 / RPWD Act 2016, with WCAG 2.1 AA as the technical baseline. An audit of the
+platform's own markup found and fixed five real failures: no skip-to-content link (2.4.1), one
+shared page title across every page (2.4.2), confirmation messages announced only visually
+(4.1.3), rating scales where a screen reader heard "1, radio button" with no idea what was being
+rated (1.3.1 / 3.3.2 / 4.1.2), and visually hidden radios with no focus state (2.4.7). The rating
+fix lives in one shared `<x-rating-scale>` component so both rating forms cannot drift apart.
+
+**What this is not.** These are regression guards written against specific criteria, not an
+accessibility audit. Nothing here has been tested with an actual screen reader, magnifier or
+switch device, colour contrast has not been measured across the palette, and the forms have not
+been walked keyboard-only end to end. Spec section 38 asks for a real audit before deployment and
+that still has to happen with assistive technology and, ideally, disabled users.
+
+Note also that the skip link's focus behaviour was verified by inspecting the compiled CSS rule
+rather than visually: the automated browser pane does not hold window focus, so `:focus` never
+matches inside it.
+
+---
+
 ## Phase 7 (partial) — International benchmarking
 
 Spec section 3, the "How India Compares" view. Built as a **structural and aggregate** comparison

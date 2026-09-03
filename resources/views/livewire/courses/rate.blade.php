@@ -153,7 +153,7 @@ new #[Layout('layouts.app')] class extends Component
     <div class="py-8 max-w-2xl mx-auto sm:px-6 lg:px-8 space-y-6">
 
         @if ($flash)
-            <div class="bg-green-50 border border-green-200 text-green-800 rounded-lg p-4 text-sm">{{ $flash }}</div>
+            <div role="status" aria-live="polite" class="bg-green-50 border border-green-200 text-green-800 rounded-lg p-4 text-sm">{{ $flash }}</div>
         @endif
 
         <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-4 text-sm text-indigo-900">
@@ -186,20 +186,7 @@ new #[Layout('layouts.app')] class extends Component
 
                 <div class="space-y-3">
                     @foreach ($dimensions as $key => $label)
-                        <div class="flex flex-wrap items-center justify-between gap-2">
-                            <span class="text-sm text-gray-700">{{ $label }}</span>
-                            <div class="flex gap-1">
-                                @foreach ([1, 2, 3, 4, 5] as $value)
-                                    <label class="cursor-pointer">
-                                        <input type="radio" wire:model="scores.{{ $key }}" value="{{ $value }}" class="sr-only peer">
-                                        <span class="inline-flex items-center justify-center w-8 h-8 text-xs rounded border border-gray-300
-                                            peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:border-indigo-600">
-                                            {{ $value }}
-                                        </span>
-                                    </label>
-                                @endforeach
-                            </div>
-                        </div>
+                        <x-rating-scale :name="'course_'.$key" :label="$label" :model="'scores.'.$key" />
                     @endforeach
                 </div>
 
