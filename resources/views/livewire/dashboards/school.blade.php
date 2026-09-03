@@ -181,6 +181,18 @@ new #[Layout('layouts.app')] class extends Component
                 </div>
             </div>
 
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="font-semibold text-gray-900 mb-3">Manage this school</h3>
+                <div class="flex flex-wrap gap-3">
+                    <a href="{{ route('fees.manage', $school) }}" wire:navigate
+                        class="px-4 py-2 text-sm rounded bg-indigo-600 text-white hover:bg-indigo-700">Fees &amp; charges</a>
+                    <a href="{{ route('academic-records.index', $school) }}" wire:navigate
+                        class="px-4 py-2 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50">Academic records</a>
+                    <a href="{{ route('schools.show', $school) }}" wire:navigate
+                        class="px-4 py-2 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50">View public profile</a>
+                </div>
+            </div>
+
             @php $pendingTotal = $pendingParents->count() + $pendingStudents->count() + $pendingTeachers->count(); @endphp
             @if ($pendingTotal > 0)
                 <div class="bg-white rounded-lg shadow p-6">

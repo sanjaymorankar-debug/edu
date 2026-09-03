@@ -9,12 +9,49 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
-    'school_code', 'name', 'board', 'management_type', 'state_id', 'district_id',
+    'school_code', 'udise_code', 'name', 'board', 'management_type', 'state_id', 'district_id',
     'address', 'city', 'pincode', 'phone', 'email', 'website', 'recognition_status',
     'classes_from', 'classes_to', 'student_count', 'teacher_count', 'established_year',
 ])]
 class School extends Model
 {
+    protected function casts(): array
+    {
+        return ['udise_verified_at' => 'datetime'];
+    }
+
+    /**
+     * Spec section 8: the "UDISE Verified School" badge may appear only when a
+     * code has actually been confirmed against government data. Holding a code
+     * is a claim; this is the verification. Never conflate the two.
+     */
+    public function isUdiseVerified(): bool
+    {
+        return $this->udise_code !== null && $this->udise_verified_at !== null;
+    }
+
+    /**
+     * Record that an officer confirmed this school's UDISE code against
+     * government data.
+     *
+     * The verification columns are deliberately absent from `$fillable`, so
+     * this is the only way to set them. A school updating its own profile
+     * cannot mass-assign itself a government verification, which is exactly
+     * the failure mode rule 44 ("never claim government verification without
+     * evidence") is guarding against.
+     */
+    public function markUdiseVerified(User $officer): void
+    {
+        if ($this->udise_code === null) {
+            throw new \LogicException('A school cannot be UDISE-verified without a UDISE code on record.');
+        }
+
+        $this->forceFill([
+            'udise_verified_at' => now(),
+            'udise_verified_by_user_id' => $officer->id,
+        ])->save();
+    }
+
     public function state(): BelongsTo
     {
         return $this->belongsTo(State::class);
@@ -48,6 +85,16 @@ class School extends Model
     public function qualityScores(): HasMany
     {
         return $this->hasMany(SchoolQualityScore::class);
+    }
+
+    public function fees(): HasMany
+    {
+        return $this->hasMany(Fee::class);
+    }
+
+    public function feeRevisions(): HasMany
+    {
+        return $this->hasMany(FeeRevision::class);
     }
 
     public function latestQualityScore(): HasOne
