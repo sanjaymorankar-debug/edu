@@ -1,3 +1,26 @@
+> ## ⚠️ New work has moved to `bkesari-platform/edu`
+>
+> This repository still serves the existing site at **`edutest.agtci.com`** and is
+> fine to keep running. But it is **behind**, and new development happens in the
+> `edu/` folder of
+> **[`sanjaymorankar-debug/bkesari-platform`](https://github.com/sanjaymorankar-debug/bkesari-platform)**,
+> which is what `devedu`/`testedu`/`edu.bkesari.com` deploy from (`DEPLOY.md` part 2).
+>
+> Measured at the time this notice was added:
+>
+> | | this repo | `bkesari-platform/edu` |
+> |---|---|---|
+> | Files (excl. `vendor/`) | 265 | 391 |
+> | Spec roles with dashboards | 10 | 12 |
+> | Files unique to this repo | **1** — a stale compiled `public/build` CSS asset | — |
+> | Shared files that differ | 25 — the platform copy is larger in every one sampled | — |
+>
+> The platform copy adds fee transparency, the claimed-vs-experienced facilities
+> model, `STUDENT_GROWTH_FRAMEWORK.md` and around 127 files of models and views
+> that do not exist here. So: **fix things here only if they affect
+> `edutest.agtci.com`; put everything else in `bkesari-platform`**, or the two
+> will keep drifting.
+
 # Education Accountability Platform
 
 A national school-quality, complaint, and accountability platform: parents and students can search schools, submit **faceless (anonymized) complaints**, rate schools, and confirm whether issues were actually resolved — while schools and government officers work the case without ever seeing the submitter's real identity.
