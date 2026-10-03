@@ -1,0 +1,45 @@
+name: CI
+
+# Runs on every push and pull request to staging and main. phpunit.xml points
+# the suite at in-memory SQLite, so no database service is needed.
+on:
+  push:
+    branches: [main, staging]
+  pull_request:
+    branches: [main, staging]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, pdo_sqlite, sqlite3
+          coverage: none
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Tests
+        run: php artisan test
+
+      # Hostinger has no Node.js, so public/build/ is committed and deployed as-is.
+      # This only checks that the frontend still builds.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Frontend build
+        run: |
+          npm ci
+          npm run build
