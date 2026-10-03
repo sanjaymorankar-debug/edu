@@ -119,3 +119,12 @@ This account's PHP has `disable_functions` including `proc_open`, `symlink`, `li
 - `edu-app/` is outside `public_html`, so `.env`, `storage/logs`, and the SQLite dev DB (not used in prod) are never web-reachable.
 - `APP_DEBUG=false` in production `.env` — never flip this on live, it would leak stack traces (including DB credentials in error contexts) to any visitor.
 - The `edutest.agtci.com` subdomain was newly created for this project and had no prior content beyond Hostinger's default placeholder page (`public_html/default.php`) — no existing site was overwritten.
+
+## Branches and promotion
+
+| Branch | Environment |
+|---|---|
+| `staging` | A separate staging subdomain with its own database, deployed from `staging` the same way (`git pull origin staging`) |
+| `main` | `edutest.agtci.com` (current live site) |
+
+Work happens on feature branches. Open a PR into `staging`; CI (`.github/workflows/ci.yml`) must pass before merging. Test on staging, then promote with a PR from `staging` into `main`. Don't commit directly to `staging` or `main`.
