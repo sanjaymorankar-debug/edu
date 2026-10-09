@@ -9,6 +9,7 @@ use App\Notifications\InvitationAccepted;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -43,7 +44,7 @@ new #[Layout('layouts.guest')] class extends Component
     public function accept(): void
     {
         if (Auth::check()) {
-            abort_unless(Auth::user()->email === $this->invitation->email, 403, 'This invitation was sent to a different email address. Log out and use that account, or ask the school to resend it to yours.');
+            abort_unless(Str::lower(Auth::user()->email) === Str::lower($this->invitation->email), 403, 'This invitation was sent to a different email address. Log out and use that account, or ask the school to resend it to yours.');
             $user = Auth::user();
         } else {
             $validated = $this->validate([

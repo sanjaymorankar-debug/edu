@@ -3,6 +3,7 @@
 use App\Models\AuditLog;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 use Spatie\Permission\Models\Permission;
@@ -38,7 +39,7 @@ new #[Layout('layouts.app')] class extends Component
     public function searchUser(): void
     {
         $this->validate(['userSearch' => ['required', 'email']]);
-        $this->foundUser = User::where('email', $this->userSearch)->first();
+        $this->foundUser = User::where('email', Str::lower(trim($this->userSearch)))->first(); // emails are stored lowercased
     }
 
     public function assignRole(): void

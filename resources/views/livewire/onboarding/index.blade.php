@@ -118,6 +118,8 @@ new #[Layout('layouts.app')] class extends Component
      */
     private function resolveChild(School $school): ?int
     {
+        $this->childEmail = Str::lower(trim($this->childEmail)); // emails are stored lowercased
+
         if ($this->childMode === 'existing') {
             $this->validate(['childEmail' => ['required', 'email', 'exists:users,email']]);
 
@@ -176,7 +178,7 @@ new #[Layout('layouts.app')] class extends Component
         $query = School::query()->orderBy('name');
 
         if ($this->search !== '') {
-            $query->where('name', 'like', "%{$this->search}%");
+            $query->whereLike('name', "%{$this->search}%"); // case-insensitive (ILIKE on PostgreSQL)
         }
 
         return [

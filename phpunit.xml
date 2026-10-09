@@ -23,6 +23,10 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
+        <!-- In-memory SQLite for quick local runs. PostgreSQL is the real
+             database: CI also runs the suite against PostgreSQL 16 by setting
+             DB_CONNECTION=pgsql (plus DB_HOST/DB_DATABASE/...) in the process
+             environment, which takes precedence over these defaults. -->
         <env name="DB_CONNECTION" value="sqlite"/>
         <env name="DB_DATABASE" value=":memory:"/>
         <env name="DB_URL" value=""/>

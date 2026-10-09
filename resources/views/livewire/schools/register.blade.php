@@ -83,6 +83,14 @@ new #[Layout('layouts.app')] class extends Component
      */
     public function register(): void
     {
+        // Emails are stored lowercased (User::email()); normalise first so the
+        // unique/distinct rules and firstOrCreate() below match existing rows
+        // on PostgreSQL, which compares text case-sensitively.
+        $this->adminEmail = Str::lower(trim($this->adminEmail));
+        foreach ($this->additionalStaff as $i => $staff) {
+            $this->additionalStaff[$i]['email'] = Str::lower(trim((string) ($staff['email'] ?? '')));
+        }
+
         // Drop blank rows before validating — an untouched default row has
         // name/email as empty strings, not null, so a "nullable" rule alone
         // wouldn't skip it.

@@ -1,7 +1,12 @@
 name: CI
 
-# Runs on every push and pull request to staging and main. phpunit.xml points
-# the suite at in-memory SQLite, so no database service is needed.
+# Runs on every push and pull request to staging and main.
+#
+# PostgreSQL is the only supported database, so the suite runs against a
+# real PostgreSQL 16 service (the authoritative run), and the full schema +
+# seeders are checked there with migrate:fresh --seed. phpunit.xml defaults
+# to in-memory SQLite for quick local runs; that run is kept here too so the
+# default `php artisan test` stays green.
 on:
   push:
     branches: [main, staging]
@@ -12,13 +17,31 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: edu
+          POSTGRES_PASSWORD: edu
+          POSTGRES_DB: edu_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U edu -d edu_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      PG_ENV: DB_CONNECTION=pgsql DB_HOST=127.0.0.1 DB_PORT=5432 DB_USERNAME=edu DB_PASSWORD=edu
+
     steps:
       - uses: actions/checkout@v4
 
       - uses: shivammathur/setup-php@v2
         with:
           php-version: "8.3"
-          extensions: mbstring, pdo_sqlite, sqlite3
+          extensions: mbstring, pdo_pgsql, pgsql, pdo_sqlite, sqlite3
           coverage: none
 
       - name: Install PHP dependencies
@@ -29,10 +52,22 @@ jobs:
           cp .env.example .env
           php artisan key:generate
 
-      - name: Tests
+      # Real environment variables take precedence over phpunit.xml's <env>
+      # defaults (they aren't force="true"), which is how this run is pointed
+      # at PostgreSQL instead of in-memory SQLite.
+      - name: Tests (PostgreSQL)
+        run: env $PG_ENV DB_DATABASE=edu_test php artisan test
+
+      - name: Migrate + seed from scratch (PostgreSQL)
+        run: |
+          PGPASSWORD=edu psql -h 127.0.0.1 -U edu -d edu_test -c "CREATE DATABASE edu_ci_seed"
+          env $PG_ENV DB_DATABASE=edu_ci_seed php artisan migrate:fresh --seed --force
+          env $PG_ENV DB_DATABASE=edu_ci_seed php artisan analytics:recalculate
+
+      - name: Tests (SQLite, phpunit.xml default)
         run: php artisan test
 
-      # Hostinger has no Node.js, so public/build/ is committed and deployed as-is.
+      # Production has no Node.js, so public/build/ is committed and deployed as-is.
       # This only checks that the frontend still builds.
       - uses: actions/setup-node@v4
         with:

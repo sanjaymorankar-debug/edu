@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
@@ -13,6 +14,19 @@ class Invitation extends Model
     protected function casts(): array
     {
         return ['accepted_at' => 'datetime'];
+    }
+
+    /**
+     * Stored lowercased, same as User::email(). MySQL's case-insensitive collation used
+     * to hide case differences; PostgreSQL compares text case-sensitively,
+     * so normalising on write keeps unique checks and login lookups
+     * case-insensitive on every driver.
+     */
+    protected function email(): Attribute
+    {
+        return Attribute::make(
+            set: fn (?string $value) => $value === null ? null : Str::lower(trim($value)),
+        );
     }
 
     public function school(): BelongsTo

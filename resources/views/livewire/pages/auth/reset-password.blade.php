@@ -43,7 +43,8 @@ new #[Layout('layouts.guest')] class extends Component
         // will update the password on an actual user model and persist it to the
         // database. Otherwise we will parse the error and return the response.
         $status = Password::reset(
-            $this->only('email', 'password', 'password_confirmation', 'token'),
+            ['email' => Str::lower(trim($this->email))] // emails are stored lowercased
+                + $this->only('password', 'password_confirmation', 'token'),
             function ($user) {
                 $user->forceFill([
                     'password' => Hash::make($this->password),

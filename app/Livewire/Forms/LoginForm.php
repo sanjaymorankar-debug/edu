@@ -30,7 +30,11 @@ class LoginForm extends Form
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only(['email', 'password']), $this->remember)) {
+        // Emails are stored lowercased (see User::email()); PostgreSQL compares
+        // case-sensitively, so normalise the input the same way.
+        $credentials = ['email' => Str::lower(trim($this->email)), 'password' => $this->password];
+
+        if (! Auth::attempt($credentials, $this->remember)) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
