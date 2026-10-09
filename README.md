@@ -55,6 +55,47 @@ This is a large spec built incrementally — see [`ROADMAP.md`](ROADMAP.md) for 
 
 See [`SETUP.md`](SETUP.md).
 
+## Tests
+
+```bash
+php artisan test                          # 111 tests on in-memory SQLite, no setup
+```
+
+That is what `phpunit.xml` pins and what CI's `test` job runs. It needs no
+database server, so it works on a fresh clone.
+
+It is also not the engine this runs on. Production is **MariaDB 10.11**, and
+SQLite agrees with it on nothing it is not forced to — these migrations declare
+28 `enum` and 10 `json` columns, and on SQLite an `enum` is a `varchar` that
+accepts any string, so a test asserting the database rejects bad data passes
+there while proving nothing. To run the same 111 tests against real MySQL:
+
+```bash
+cp .env.testing.example .env.testing      # defaults match the local devstack
+php artisan key:generate --env=testing
+php artisan test -c phpunit.mysql.xml
+```
+
+Two things about that which are easy to get wrong, both found by being caught
+by them:
+
+- **The `-c` is not optional.** PHPUnit applies its `<env>` entries before
+  Laravel boots, and Laravel's dotenv will not overwrite a variable that
+  already exists, so `phpunit.xml`'s `DB_CONNECTION=sqlite` beats anything in
+  `.env.testing`. Without `-c phpunit.mysql.xml` the suite stays on SQLite —
+  green, fast, and testing the wrong thing. `phpunit.mysql.xml` is
+  `phpunit.xml` with those keys left out so `.env.testing` can decide.
+- **`.env.testing` replaces `.env`, it does not layer on top.** Laravel loads
+  one or the other. A `.env.testing` holding only the `DB_*` lines unsets
+  everything else: 88 of the 111 tests then fail on a missing `APP_KEY`. Hence
+  the full copy and the `key:generate --env=testing`.
+
+CI runs both engines, and the `db-mysql` job fails if `edu_test` comes back
+empty — that being the only way it could go green while running on SQLite.
+
+> `.env.testing` points at a **throwaway** database; the suite migrates it from
+> scratch on every run.
+
 ## Deploying
 
 See [`DEPLOYMENT.md`](DEPLOYMENT.md).

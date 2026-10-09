@@ -1,7 +1,12 @@
 name: CI
 
-# Runs on every push and pull request to staging and main. phpunit.xml points
-# the suite at in-memory SQLite, so no database service is needed.
+# Runs on every push and pull request to staging and main.
+#
+# Two jobs on the same 111 tests. `test` runs them on in-memory SQLite, which
+# needs no service and is what phpunit.xml pins. `db-mysql` runs them against a
+# real MySQL, because production is MariaDB and SQLite agrees with it on nothing
+# it is not forced to: these migrations declare 28 `enum` and 10 `json` columns,
+# and on SQLite an enum is a varchar that accepts anything.
 on:
   push:
     branches: [main, staging]
@@ -43,3 +48,75 @@ jobs:
         run: |
           npm ci
           npm run build
+
+  db-mysql:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        # 8.0 to match the local devstack, so a failure here reproduces with
+        # `php artisan test -c phpunit.mysql.xml` rather than only in CI.
+        # Production is MariaDB 10.11: this proves MySQL compatibility, which
+        # is much closer to MariaDB than SQLite is, but not MariaDB itself.
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: edu_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+    # Real environment variables, which beat a phpunit.xml <env> entry because
+    # those carry no force="true". phpunit.mysql.xml additionally leaves
+    # DB_CONNECTION and DB_DATABASE unset so nothing here is pre-empted.
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: edu_test
+      DB_USERNAME: root
+      DB_PASSWORD: root
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          # pdo_mysql rather than the sqlite pair the other job needs.
+          extensions: mbstring, pdo_mysql
+          coverage: none
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      # No .env.testing here: it is gitignored, so it does not exist in a
+      # checkout, and the env block above supplies the same values. APP_KEY
+      # still has to come from somewhere, hence .env.
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Tests on MySQL
+        run: php artisan test -c phpunit.mysql.xml
+
+      # The step above would pass just as happily on SQLite if DB_CONNECTION
+      # ever stopped reaching the suite -- that is the one way this job can go
+      # green while testing the wrong engine, and it is how the local setup was
+      # caught doing it. So check the service itself: the suite migrates
+      # edu_test from scratch, and an empty database means it never arrived.
+      - name: Check the suite really used MySQL
+        run: |
+          set -euo pipefail
+          tables=$(mysql -h 127.0.0.1 -P 3306 -uroot -proot -N -B \
+            -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'edu_test';")
+          echo "tables in edu_test: $tables"
+          [ "$tables" -gt 0 ] || {
+            echo "::error::edu_test is empty - the suite ran on SQLite, not the MySQL service"
+            exit 1
+          }
