@@ -1,3 +1,26 @@
+> ## ⚠️ New work has moved to `bkesari-platform/edu`
+>
+> This repository still serves the existing site at **`edutest.agtci.com`** and is
+> fine to keep running. But it is **behind**, and new development happens in the
+> `edu/` folder of
+> **[`sanjaymorankar-debug/bkesari-platform`](https://github.com/sanjaymorankar-debug/bkesari-platform)**,
+> which is what `devedu`/`testedu`/`edu.bkesari.com` deploy from (`DEPLOY.md` part 2).
+>
+> Measured at the time this notice was added:
+>
+> | | this repo | `bkesari-platform/edu` |
+> |---|---|---|
+> | Files (excl. `vendor/`) | 265 | 391 |
+> | Spec roles with dashboards | 10 | 12 |
+> | Files unique to this repo | **1** — a stale compiled `public/build` CSS asset | — |
+> | Shared files that differ | 25 — the platform copy is larger in every one sampled | — |
+>
+> The platform copy adds fee transparency, the claimed-vs-experienced facilities
+> model, `STUDENT_GROWTH_FRAMEWORK.md` and around 127 files of models and views
+> that do not exist here. So: **fix things here only if they affect
+> `edutest.agtci.com`; put everything else in `bkesari-platform`**, or the two
+> will keep drifting.
+
 # Education Accountability Platform
 
 A national school-quality, complaint, and accountability platform: parents and students can search schools, submit **faceless (anonymized) complaints**, rate schools, and confirm whether issues were actually resolved — while schools and government officers work the case without ever seeing the submitter's real identity.
@@ -31,6 +54,47 @@ This is a large spec built incrementally — see [`ROADMAP.md`](ROADMAP.md) for 
 ## Quick start (local dev)
 
 See [`SETUP.md`](SETUP.md).
+
+## Tests
+
+```bash
+php artisan test                          # 111 tests on in-memory SQLite, no setup
+```
+
+That is what `phpunit.xml` pins and what CI's `test` job runs. It needs no
+database server, so it works on a fresh clone.
+
+It is also not the engine this runs on. Production is **MariaDB 10.11**, and
+SQLite agrees with it on nothing it is not forced to — these migrations declare
+28 `enum` and 10 `json` columns, and on SQLite an `enum` is a `varchar` that
+accepts any string, so a test asserting the database rejects bad data passes
+there while proving nothing. To run the same 111 tests against real MySQL:
+
+```bash
+cp .env.testing.example .env.testing      # defaults match the local devstack
+php artisan key:generate --env=testing
+php artisan test -c phpunit.mysql.xml
+```
+
+Two things about that which are easy to get wrong, both found by being caught
+by them:
+
+- **The `-c` is not optional.** PHPUnit applies its `<env>` entries before
+  Laravel boots, and Laravel's dotenv will not overwrite a variable that
+  already exists, so `phpunit.xml`'s `DB_CONNECTION=sqlite` beats anything in
+  `.env.testing`. Without `-c phpunit.mysql.xml` the suite stays on SQLite —
+  green, fast, and testing the wrong thing. `phpunit.mysql.xml` is
+  `phpunit.xml` with those keys left out so `.env.testing` can decide.
+- **`.env.testing` replaces `.env`, it does not layer on top.** Laravel loads
+  one or the other. A `.env.testing` holding only the `DB_*` lines unsets
+  everything else: 88 of the 111 tests then fail on a missing `APP_KEY`. Hence
+  the full copy and the `key:generate --env=testing`.
+
+CI runs both engines, and the `db-mysql` job fails if `edu_test` comes back
+empty — that being the only way it could go green while running on SQLite.
+
+> `.env.testing` points at a **throwaway** database; the suite migrates it from
+> scratch on every run.
 
 ## Deploying
 
