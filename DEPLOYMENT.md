@@ -73,8 +73,10 @@ php artisan key:generate --force
 # 5. Migrate + seed (first time only — NEVER migrate:fresh after this)
 php artisan migrate --force
 php artisan db:seed --force
-#    (No SSH? Import database/sql/01-schema.sql, 02-reference-data.sql and,
-#     on a test site, 03-demo-data.sql in phpMyAdmin instead — see database/sql/README.md)
+#    (Or, instead of these two commands, import database/sql/01-schema.sql,
+#     02-reference-data.sql and, on a test site only, 03-demo-data.sql into the
+#     empty PostgreSQL database with psql, pgAdmin or the provider's SQL
+#     console — see database/sql/README.md)
 
 # 6. Wire up public_html to serve the app
 rm -f ~/domains/edutest.agtci.com/public_html/default.php
