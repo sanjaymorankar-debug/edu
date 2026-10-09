@@ -1,7 +1,8 @@
 name: CI
 
-# Runs on every push and pull request to staging and main. phpunit.xml points
-# the suite at in-memory SQLite, so no database service is needed.
+# Runs on every push and pull request to staging and main. The suite runs
+# against a real PostgreSQL 16 service (the production database engine); the
+# DB_* env vars below override phpunit.xml's in-memory SQLite default.
 on:
   push:
     branches: [main, staging]
@@ -12,13 +13,37 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        # AWS public mirror of the Docker Official postgres image — avoids Docker Hub's anonymous pull rate limit.
+        image: public.ecr.aws/docker/library/postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: edu_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d edu_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: edu_test
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+
     steps:
       - uses: actions/checkout@v4
 
       - uses: shivammathur/setup-php@v2
         with:
           php-version: "8.3"
-          extensions: mbstring, pdo_sqlite, sqlite3
+          extensions: mbstring, pdo_pgsql, pgsql
           coverage: none
 
       - name: Install PHP dependencies
@@ -29,7 +54,13 @@ jobs:
           cp .env.example .env
           php artisan key:generate
 
-      - name: Tests
+      # Smoke-checks every migration and seeder against PostgreSQL.
+      - name: Migrate and seed (PostgreSQL)
+        run: php artisan migrate:fresh --seed --force
+        env:
+          BCRYPT_ROUNDS: 4
+
+      - name: Tests (PostgreSQL)
         run: php artisan test
 
       # Hostinger has no Node.js, so public/build/ is committed and deployed as-is.
