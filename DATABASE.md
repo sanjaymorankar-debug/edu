@@ -1,6 +1,6 @@
 # Database
 
-MySQL in production (Hostinger), SQLite for local dev. 40 tables (see `database/migrations/`).
+PostgreSQL 16 in every environment (local dev, CI, staging, production). SQLite is used only for the zero-setup in-memory test run (`phpunit.xml`); CI runs the same suite against PostgreSQL. 41 migrations, ~50 tables (see `database/migrations/`).
 
 ## Core groups
 
@@ -39,6 +39,28 @@ MySQL in production (Hostinger), SQLite for local dev. 40 tables (see `database/
 ## Indexes
 
 Search-relevant columns on `schools` (name, pincode, board, state/district), `complaints` (status, school_id+status, district_id+status, anonymous_ref), and `school_quality_scores` (school_id+calculated_at) are indexed. Nothing here is tuned for the 100k+-school scale the full spec envisions — see `ROADMAP.md` for aggregation-table/caching work that's deferred.
+
+## PostgreSQL notes
+
+The schema was originally written for MySQL; these are the places where PostgreSQL behaves differently and what the app does about it:
+
+- **Case-sensitive text comparison.** MySQL's `utf8mb4_unicode_ci` collation made `=` and `LIKE` case-insensitive; PostgreSQL does not. `users.email` is therefore a `citext` column on PostgreSQL (migration `2026_10_09_000000_make_user_email_case_insensitive_on_pgsql`, which runs `CREATE EXTENSION IF NOT EXISTS citext`), so login, password reset, `unique:users,email` and the admin email lookup still match regardless of case, and the unique index still rejects `Alice@x.com` next to `alice@x.com`. User-facing search uses `whereLike()`, which compiles to `ILIKE`. New code that searches free text should use `whereLike()` / `orWhereLike()`, not `where(..., 'like', ...)`. Machine-generated values (statuses, slugs, tokens, `anonymous_ref`, complaint numbers) are always written in one case, so their exact comparisons are unaffected.
+- **`enum()` columns** become `varchar` + a `CHECK` constraint (Laravel's pgsql grammar), so invalid values are still rejected at the database level.
+- **`unsigned*()` columns** have no unsigned equivalent: `unsignedInteger` is a signed `integer`, `unsignedSmallInteger` a `smallint`, `unsignedBigInteger` a `bigint`. Nothing stored here approaches those limits, but negative values are not rejected by the database — validate them in the app.
+- **`json()` columns** are PostgreSQL `json`. `json` has no equality operator, so don't use `DISTINCT`, `GROUP BY`, or `=` on these columns (nothing currently does).
+- **Booleans** are real `boolean`s; every boolean column has a `'boolean'` cast on its model, so PHP sees `true`/`false` on both drivers.
+- **Grouping:** PostgreSQL requires every selected non-aggregate column to be in `GROUP BY` (the queries in `RecalculateAnalyticsSnapshots` already comply).
+- **Transactions:** after any error inside a PostgreSQL transaction, every further statement in it fails until rollback — don't catch-and-continue on a `QueryException` inside `DB::transaction()`.
+
+## Backups
+
+```bash
+pg_dump --format=custom --no-owner -h <DB_HOST> -U <DB_USERNAME> -d <DB_DATABASE> -f backup-$(date +%Y%m%d-%H%M%S).dump
+# restore into an empty database:
+pg_restore --no-owner -h <DB_HOST> -U <DB_USERNAME> -d <DB_DATABASE> backup-....dump
+```
+
+Use a `pg_dump` client whose major version is the same as or newer than the server's. Most managed PostgreSQL services also take automatic snapshots — check what your provider keeps and for how long.
 
 ## Migrating on the live server
 
