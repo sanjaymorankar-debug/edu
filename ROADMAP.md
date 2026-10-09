@@ -29,6 +29,7 @@ The original spec for this platform is a multi-month, national-scale system (50+
 
 - **AI provider**: kept rule-based/heuristic rather than integrating a real model — no API key was available, and the user chose to defer rather than block this round on acquiring one.
 - **Mail delivery**: Hostinger's local sendmail relay over a third-party SMTP provider — no external credentials to manage, at the cost of no delivery guarantee (see "Partially built" above).
+- **Database**: PostgreSQL is the final database; MySQL/MariaDB support was removed. Hostinger shared hosting has no PostgreSQL, so production needs a host that provides PostgreSQL and PHP's `pdo_pgsql` (see `DEPLOYMENT.md`).
 
 ## Full doc set
 
@@ -36,6 +37,7 @@ Spec asked for 12 docs; this build ships 8 (`README`, `SETUP`, `DEPLOYMENT`, `DA
 
 ## Suggested next phase order
 
+0. **Blocking for the next deploy:** move the database to PostgreSQL — provision a PostgreSQL database reachable from the web host (Hostinger shared hosting doesn't offer one) and confirm PHP has `pdo_pgsql`, then follow `DEPLOYMENT.md`'s "Database requirement" section and `DATABASE.md`'s "Moving off the old MySQL database". If the app moves host, re-check the sendmail relay and cron notes below, which are Hostinger-specific.
 1. Confirm the `analytics:recalculate` cron entry is actually running on the host (see `DEPLOYMENT.md`) — the manual "Recalculate now" button and same-request fallback mean the dashboards work either way, but scheduled freshness needs the real cron.
 2. Confirm production mail deliverability in practice (check spam placement, bounce rate) — if Hostinger's sendmail relay proves unreliable, revisit with a transactional email provider.
 3. Account-level anti-manipulation detection beyond feedback-timing (e.g. coordinated multi-account patterns) — should follow, not precede, having enough real usage data to design against.

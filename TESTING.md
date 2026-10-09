@@ -4,7 +4,14 @@
 php artisan test
 ```
 
-111 tests, all passing as of this build (Pest/PHPUnit via Laravel's test runner).
+116 tests, all passing as of this build (Pest/PHPUnit via Laravel's test runner), on both PostgreSQL 16 and in-memory SQLite.
+
+`phpunit.xml` defaults to in-memory SQLite so the suite runs with no setup. PostgreSQL is the production database, so CI also runs the suite against a PostgreSQL 16 service (and a full `migrate:fresh --seed`). To do the same locally, point it at a throwaway database — it gets wiped:
+
+```bash
+DB_CONNECTION=pgsql DB_HOST=127.0.0.1 DB_PORT=5432 DB_DATABASE=edu_test \
+  DB_USERNAME=edu DB_PASSWORD=... php artisan test
+```
 
 ## What's covered
 
@@ -19,6 +26,7 @@ php artisan test
 - **Admin panel additions** (`tests/Feature/Platform/AdminPanelTest.php`): System Admin can review (dismiss) a fraud flag with reviewer/timestamp recorded, update moderation thresholds (persisted via the `Setting` model), toggle a role's permission, and assign/remove a role from a user found by email
 - **Teacher Effectiveness value-add** (`tests/Feature/Platform/TeacherEffectivenessTest.php`): a teacher with a subject specialization and two `student_academic_records` showing improvement gets a `value_add` component in `component_breakdown`; a teacher with no subject specialization gets none
 - **Fraud-flag auto-creation** (`tests/Feature/Platform/SchoolFeedbackTest.php`): a burst of 5 feedback submissions for the same school within the default window creates exactly one open `feedback_spike` flag
+- **Case-insensitive lookups** (`tests/Feature/Platform/CaseInsensitiveLookupTest.php`): PostgreSQL compares text case-sensitively (MySQL's collation didn't), so this guards school search (public index + onboarding picker) matching regardless of case, emails being stored lowercased, login succeeding with a differently-cased email, and school registration rejecting an existing email typed in a different case. All five fail on PostgreSQL without the fixes.
 
 ## Manual browser verification (done for this build)
 

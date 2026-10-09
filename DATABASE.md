@@ -1,6 +1,6 @@
 # Database
 
-MySQL in production (Hostinger), SQLite for local dev. 40 tables (see `database/migrations/`).
+PostgreSQL (14+, tested on 16) in every real environment — production, staging and local dev. MySQL/MariaDB are not supported. The test suite can also run on in-memory SQLite (see `SETUP.md`). 40 tables (see `database/migrations/`).
 
 ## Core groups
 
@@ -40,6 +40,23 @@ MySQL in production (Hostinger), SQLite for local dev. 40 tables (see `database/
 
 Search-relevant columns on `schools` (name, pincode, board, state/district), `complaints` (status, school_id+status, district_id+status, anonymous_ref), and `school_quality_scores` (school_id+calculated_at) are indexed. Nothing here is tuned for the 100k+-school scale the full spec envisions — see `ROADMAP.md` for aggregation-table/caching work that's deferred.
 
+## PostgreSQL specifics
+
+- **`enum` columns** are created by Laravel as `varchar` plus a `CHECK (col IN (...))` constraint (e.g. `complaints_status_check`). Adding a value to an enum later needs a migration that drops and re-creates that check constraint — there's no `ALTER TYPE`.
+- **`json` columns** are native `json`. Compare/filter in PHP after casting, or use Laravel's `->` JSON path syntax; don't compare a json column with `=`.
+- **Text comparisons are case-sensitive.** User-facing search uses `whereLike()` (→ `ILIKE`). Emails are stored lowercased by the `User`/`Invitation` models and lowercased again before every lookup — keep it that way, or two accounts can differ only by case.
+- **Booleans** are real `boolean` columns — compare with `true`/`false`, never `1`/`0`.
+- **Sequences:** ids come from per-table sequences. If you ever insert rows with explicit ids (e.g. a bulk import), reset the sequence afterwards: `SELECT setval(pg_get_serial_sequence('users','id'), (SELECT max(id) FROM users));`
+
+## Creating the database
+
+```sql
+CREATE ROLE edu WITH LOGIN PASSWORD '<strong password>';
+CREATE DATABASE edu_platform OWNER edu ENCODING 'UTF8';
+```
+
+The app role only needs to own its database; it doesn't need superuser. On a managed PostgreSQL service, create the role/database in the provider's console instead and copy the host/port/credentials into `.env` (set `DB_SSLMODE=require` if the provider enforces TLS).
+
 ## Migrating on the live server
 
 ```bash
@@ -47,3 +64,33 @@ php artisan migrate --force
 ```
 
 `--force` is required in production since `APP_ENV=production` blocks interactive migration prompts. **Never run `migrate:fresh` against the live database** — it drops every table.
+
+## Backups and restore
+
+Back up before every migration/deploy:
+
+```bash
+pg_dump -h <DB_HOST> -p <DB_PORT> -U <DB_USERNAME> -Fc -f backup-$(date +%Y%m%d-%H%M%S).dump <DB_DATABASE>
+```
+
+`-Fc` is PostgreSQL's compressed custom format. Restore into an empty database with:
+
+```bash
+pg_restore -h <DB_HOST> -p <DB_PORT> -U <DB_USERNAME> -d <DB_DATABASE> --no-owner --clean --if-exists backup-YYYYMMDD-HHMMSS.dump
+```
+
+`pg_dump`'s major version must be ≥ the server's. Keep backups off the web root.
+
+## Moving off the old MySQL database (one-time)
+
+Earlier deployments ran on MySQL. All data in the test environment is synthetic, so the simplest path is a fresh PostgreSQL database with `php artisan migrate --force` + `php artisan db:seed --force`. If existing rows ever need to be carried over instead:
+
+1. Create the schema on PostgreSQL with `php artisan migrate --force` (don't let a conversion tool create tables — the migrations define the constraints the app relies on).
+2. Copy the data table by table (e.g. `pgloader` with `data only`, or a CSV export/`\copy` import), skipping the `migrations` table.
+3. Lowercase emails, after checking nothing collides once case is ignored (MySQL treated these as equal; PostgreSQL won't):
+   ```sql
+   SELECT lower(email), count(*) FROM users GROUP BY 1 HAVING count(*) > 1;   -- must return no rows
+   UPDATE users SET email = lower(email);
+   UPDATE invitations SET email = lower(email);
+   ```
+4. Reset every table's id sequence (see "Sequences" above).

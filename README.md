@@ -3,7 +3,7 @@
 A national school-quality, complaint, and accountability platform: parents and students can search schools, submit **faceless (anonymized) complaints**, rate schools, and confirm whether issues were actually resolved — while schools and government officers work the case without ever seeing the submitter's real identity.
 
 **Live (test):** https://edutest.agtci.com
-**Stack:** Laravel 13, Livewire/Volt, Tailwind, MySQL (Hostinger) / SQLite (local dev)
+**Stack:** Laravel 13, Livewire/Volt, Tailwind, PostgreSQL (14+, tested on 16 — the only supported database; the hosting target must provide PostgreSQL and PHP's `pdo_pgsql`, see [`DEPLOYMENT.md`](DEPLOYMENT.md))
 
 This is a large spec built incrementally — see [`ROADMAP.md`](ROADMAP.md) for exactly what's built vs. deliberately deferred, and don't take this repo as feature-complete against the original brief.
 
@@ -39,8 +39,8 @@ See [`DEPLOYMENT.md`](DEPLOYMENT.md).
 ## Docs index
 
 - [`SETUP.md`](SETUP.md) — local development setup
-- [`DEPLOYMENT.md`](DEPLOYMENT.md) — Hostinger deployment steps
-- [`DATABASE.md`](DATABASE.md) — schema overview
+- [`DEPLOYMENT.md`](DEPLOYMENT.md) — deployment steps and hosting/PostgreSQL requirements
+- [`DATABASE.md`](DATABASE.md) — schema overview, PostgreSQL notes, backups (`pg_dump`)
 - [`SECURITY_PRIVACY.md`](SECURITY_PRIVACY.md) — identity-separation design, what's hardened vs. not yet
 - [`TESTING.md`](TESTING.md) — how to run the test suite, what's covered
 - [`TEST_ACCOUNTS.md`](TEST_ACCOUNTS.md) — demo login credentials (synthetic data only)
