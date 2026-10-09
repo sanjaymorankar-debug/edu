@@ -2,6 +2,38 @@
 
 **Live target:** `https://edutest.agtci.com` (domain root — not a subpath)
 **Hosting account:** shared Hostinger hosting, no Node.js available server-side, PHP 8.3 + Composer + git available via SSH.
+**Database:** PostgreSQL (13+, 16 recommended — CI tests against 16). MySQL is no longer supported.
+
+## Database: PostgreSQL — read this first
+
+> **Hostinger shared/cloud web hosting does not provide PostgreSQL** — hPanel's database tools are MySQL-only. The PHP app can stay on Hostinger, but the database has to live somewhere else:
+>
+> - **a managed PostgreSQL service** (any provider that gives you a host, port, database, user and password, with TLS), or
+> - **a VPS** (Hostinger VPS or elsewhere) where you install and run PostgreSQL yourself — in that case you also own its updates, backups and firewalling, and could move the PHP app onto the same VPS.
+
+Before switching production over, verify on the PHP host (over SSH), and don't proceed until all three are true:
+
+1. **`pdo_pgsql` is enabled for the PHP version that serves the site** — `php -m | grep -i pdo_pgsql`. The CLI and the web PHP can be configured separately; also check from the web side (e.g. a temporary `phpinfo()` page you delete afterwards). Without `pdo_pgsql` the app cannot connect at all.
+2. **The host can reach the database over the network** — shared hosting may restrict outbound connections. Test with `php -r 'new PDO("pgsql:host=<DB_HOST>;port=<DB_PORT>;dbname=<DB_DATABASE>;sslmode=require", "<DB_USERNAME>", "<DB_PASSWORD>"); echo "ok\n";'`. If your provider restricts incoming connections by IP, allow the Hostinger server's outbound IP.
+3. **The database user can `CREATE EXTENSION citext`** (one migration needs it; `citext` is a trusted extension, so the database owner normally can). If your provider manages extensions separately, enable `citext` there first.
+
+These checks have not been run against the live account — they're what to confirm, not a record of what's been confirmed.
+
+The `.env` database block for production:
+
+```
+DB_CONNECTION=pgsql
+DB_HOST=<managed postgres host>
+DB_PORT=5432
+DB_DATABASE=<database>
+DB_USERNAME=<user>
+DB_PASSWORD=<password>
+DB_SSLMODE=require
+```
+
+Use `DB_SSLMODE=require` (or `verify-full` if you install the provider's CA certificate) whenever the database is reached over the network. Some providers hand out a single connection URL instead; it can go in `DB_URL` (`postgresql://user:pass@host:5432/db?sslmode=require`), which overrides the individual `DB_*` values. If the provider offers a connection pooler (e.g. PgBouncer in transaction mode), prefer the direct/session connection for `php artisan migrate`.
+
+**Moving off the old MySQL database:** there is no automated data migration in this repo. If the existing `edutest` database holds only seeded synthetic data (check before discarding it), the simplest path is to run the migrations + seeders fresh on the new PostgreSQL database (step 5 below). If real data ever needs to be carried over, take a `mysqldump` of the old database first and plan the copy separately (e.g. evaluate a MySQL→PostgreSQL tool such as pgloader against a staging copy, then reset each table's id sequence) — test that on staging, never directly on production.
 
 ## Why this layout
 
@@ -34,14 +66,17 @@ composer install --no-dev --optimize-autoloader
 
 # 4. Configure environment
 cp .env.example .env
-nano .env   # fill in DB_DATABASE/DB_USERNAME/DB_PASSWORD, confirm APP_URL=https://edutest.agtci.com
+nano .env   # fill in DB_HOST/DB_PORT/DB_DATABASE/DB_USERNAME/DB_PASSWORD for the PostgreSQL database,
+            # set DB_SSLMODE=require, confirm APP_URL=https://edutest.agtci.com
 php artisan key:generate --force
 
 # 5. Migrate + seed (first time only — NEVER migrate:fresh after this)
 php artisan migrate --force
 php artisan db:seed --force
-#    (No SSH? Import database/sql/01-schema.sql, 02-reference-data.sql and,
-#     on a test site, 03-demo-data.sql in phpMyAdmin instead — see database/sql/README.md)
+#    (Or, instead of these two commands, import database/sql/01-schema.sql,
+#     02-reference-data.sql and, on a test site only, 03-demo-data.sql into the
+#     empty PostgreSQL database with psql, pgAdmin or the provider's SQL
+#     console — see database/sql/README.md)
 
 # 6. Wire up public_html to serve the app
 rm -f ~/domains/edutest.agtci.com/public_html/default.php
@@ -91,8 +126,10 @@ php artisan config:cache
 Database migrations are additive in this build (no destructive migrations shipped) — a code rollback doesn't require a matching DB rollback unless a specific migration is known to be destructive. Always back up before any migration:
 
 ```bash
-mysqldump -u <DB_USERNAME> -p <DB_DATABASE> > backup-$(date +%Y%m%d-%H%M%S).sql
+pg_dump --format=custom --no-owner -h <DB_HOST> -p <DB_PORT> -U <DB_USERNAME> -d <DB_DATABASE> -f backup-$(date +%Y%m%d-%H%M%S).dump
 ```
+
+`pg_dump` must be the same major version as the server or newer; if the Hostinger shell doesn't have a suitable `pg_dump`, run it from another machine or rely on your provider's snapshots/backups (and know how to restore from them). See [`DATABASE.md`](DATABASE.md#backups) for restore.
 
 ## Mail delivery
 
@@ -118,7 +155,8 @@ This account's PHP has `disable_functions` including `proc_open`, `symlink`, `li
 
 ## Safety notes
 
-- `edu-app/` is outside `public_html`, so `.env`, `storage/logs`, and the SQLite dev DB (not used in prod) are never web-reachable.
+- `edu-app/` is outside `public_html`, so `.env` and `storage/logs` are never web-reachable.
+- Give the app its own PostgreSQL role that owns only this database — not a provider superuser/admin role — and keep TLS on (`DB_SSLMODE=require`).
 - `APP_DEBUG=false` in production `.env` — never flip this on live, it would leak stack traces (including DB credentials in error contexts) to any visitor.
 - The `edutest.agtci.com` subdomain was newly created for this project and had no prior content beyond Hostinger's default placeholder page (`public_html/default.php`) — no existing site was overwritten.
 
@@ -126,7 +164,7 @@ This account's PHP has `disable_functions` including `proc_open`, `symlink`, `li
 
 | Branch | Environment |
 |---|---|
-| `staging` | A separate staging subdomain with its own database, deployed from `staging` the same way (`git pull origin staging`) |
+| `staging` | A separate staging subdomain with its own PostgreSQL database, deployed from `staging` the same way (`git pull origin staging`) |
 | `main` | `edutest.agtci.com` (current live site) |
 
-Work happens on feature branches. Open a PR into `staging`; CI (`.github/workflows/ci.yml`) must pass before merging. Test on staging, then promote with a PR from `staging` into `main`. Don't commit directly to `staging` or `main`.
+Work happens on feature branches. Open a PR into `staging`; CI (`.github/workflows/ci.yml`, which migrates, seeds and runs the full test suite against PostgreSQL 16) must pass before merging. Test on staging, then promote with a PR from `staging` into `main`. Don't commit directly to `staging` or `main`.
