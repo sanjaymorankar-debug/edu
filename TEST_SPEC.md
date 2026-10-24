@@ -8,7 +8,7 @@ Testing agent: `.claude/agents/edu-standalone-tester.md`. It runs automatically 
 
 | Component | Path | Language / framework |
 |---|---|---|
-| App core: routes, controllers, policies, services, models, providers | `app/`, `routes/`, `bootstrap/`, `config/` | PHP 8.3, Laravel 13.26 (pinned by `composer.lock`) |
+| App core: routes, controllers, policies, services, models, providers | `app/`, `routes/`, `bootstrap/`, `config/` | PHP 8.3, Laravel 13.38 (pinned by `composer.lock`; the pooler support needs 13.26+) |
 | Pages, where most of the business logic lives | `resources/views/livewire/**` | Blade + Livewire 3 / Volt |
 | PostgreSQL connector (passes `channel_binding` to libpq) | `app/Database/PostgresConnector.php` | PHP |
 | Schema and seed data | `database/migrations/`, `database/seeders/` | Laravel migrations (PostgreSQL 16) |
@@ -248,7 +248,7 @@ psqlt -qc "delete from complaints where subject = 'Concurrency probe'"
 
 ## 5. Baseline
 
-Measured on 2026-10-24 on branch `claude/fervent-bell-wcmmdu` (base `cc17e7b` plus this run's uncommitted changes), Linux, PHP 8.3.6, Composer 2.8.12, Node 22.22.0 / npm 10.9.4, PostgreSQL 16.15, PgBouncer 1.22.0, Laravel 13.26.1, PHPUnit 12.5.33.
+Measured on 2026-10-24 on branch `claude/fervent-bell-wcmmdu` (base `aa324a3` plus the uncommitted security upgrade in `composer.lock`: `laravel/framework` 13.26.1 → 13.38.0, `symfony/http-foundation` 7.4.17 → 7.4.21, `league/commonmark` 2.10.0 → 2.10.4, with 43 dependencies moved by `-W`), Linux, PHP 8.3.6, Composer 2.8.12, Node 22.22.0 / npm 10.9.4, PostgreSQL 16.15, PgBouncer 1.22.0, Laravel 13.38.0, PHPUnit 12.5.33.
 
 Final run (the counts to compare against):
 
@@ -257,15 +257,15 @@ Final run (the counts to compare against):
 | S1a–S1d, S1f | 5 checks | 5 | 0 | 0 | 7 s together |
 | S1e Pint (report-only) | 12 files listed, all older than this spec: `bootstrap/app.php`, `bootstrap/providers.php`, `database/seeders/TeacherFeedbackSeeder.php`, and in `tests/Feature/Platform/`: `AIAssistServiceTest`, `AcademicRecordsTest`, `AdminPanelTest`, `AnonymizationTest`, `ComplaintFlowTest`, `RegistrationFlowTest`, `RetaliationReportTest`, `TeacherEffectivenessTest`, `TwoFactorAuthTest` | — | — | — | 1 s |
 | S2 `php artisan test` (SQLite) | 130 tests, 331 assertions | 127 | 0 | 3 (expected: the PostgreSQL-only email tests) | 10 s |
-| S3a suite on PostgreSQL | 130 tests, 337 assertions | 130 | 0 | 0 | 18 s |
-| S3b–S3d | 3 checks (`50`/`citext`; `3\|20\|284\|100\|4`; `Nothing to migrate`) | 3 | 0 | 0 | 9 s |
-| S4a / S4b | build current / rebuilt build listed for commit | 1 | 0 | 0 | 10 s |
-| S5a probes / S5b browser | 17 probes / 5 steps | 17 / 5 | 0 | 0 | 12 s / 6 s |
+| S3a suite on PostgreSQL | 130 tests, 337 assertions | 130 | 0 | 0 | 17 s |
+| S3b–S3d | 3 checks (`50`/`citext`; `3\|20\|284\|100\|4`; `Nothing to migrate`) | 3 | 0 | 0 | 8 s |
+| S4a / S4b | build current / rebuilt build listed for commit | 1 | 0 | 0 | 12 s |
+| S5a probes / S5b browser | 17 probes / 5 steps | 17 / 5 | 0 | 0 | 2 s / 5 s |
 | S6a–S6d | 4 checks | 4 | 0 | 0 | 1 s |
-| S6e audits (report-only) | Composer: 6 advisories (3 `laravel/framework` < 13.30, 2 `league/commonmark`, 1 `symfony/http-foundation`); npm `--omit=dev`: 0 (7 in build-only dev dependencies) | — | — | — | 10 s |
+| S6e audits (report-only) | Composer: 0 advisories, with and without `--no-dev` (the 6 of the previous baseline, 3 `laravel/framework` < 13.30, 2 `league/commonmark` ≤ 2.10.1 and 1 `symfony/http-foundation` < 7.4.19, were cleared by the upgrade above); npm `--omit=dev`: 0 (7 in build-only dev dependencies: `shell-quote`, `source-map-js`, `vite`/`launch-editor`) | — | — | — | 5 s |
 | S7 N1–N9 | 9 checks; N2 = 130 tests through the pooler, 130 passed | 9 | 0 | 0 | 50 s |
 
-First run, before this run's fixes (commit `cc17e7b`, nothing uncommitted): S2 116 tests, 113 passed, 3 skipped (11 s); S3a 116 tests, 116 passed (18 s). The 14 new tests come from this run: 1 in `TwoFactorAuthTest`, and the new `ComplaintNumberTest` (3), `ComplaintEvidenceTest` (3) and `DatabaseConnectionTest` (7). Older counts in the docs (111 in README, 116 in PR #5) were right at the time; neither is the suite as it stands.
+First run, before this run's fixes (commit `cc17e7b`, nothing uncommitted): S2 116 tests, 113 passed, 3 skipped (11 s); S3a 116 tests, 116 passed (18 s). The 14 new tests come from this run: 1 in `TwoFactorAuthTest`, and the new `ComplaintNumberTest` (3), `ComplaintEvidenceTest` (3) and `DatabaseConnectionTest` (7). Older counts in the docs (111 in README, 116 in PR #5) were right at the time; neither is the suite as it stands. The security upgrade (Laravel 13.38.0) changed no count and needed no code change: the pooler support (Laravel's `direct` key plus `app/Database/PostgresConnector.php`) passed `DatabaseConnectionTest` and all of S7 unchanged.
 
 ## 6. Pass criteria
 
