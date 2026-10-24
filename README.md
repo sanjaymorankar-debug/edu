@@ -58,43 +58,25 @@ See [`SETUP.md`](SETUP.md).
 ## Tests
 
 ```bash
-php artisan test                          # 111 tests on in-memory SQLite, no setup
+php artisan test        # 130 tests on in-memory SQLite, no setup (3 PostgreSQL-only ones skip)
 ```
 
-That is what `phpunit.xml` pins and what CI's `test` job runs. It needs no
-database server, so it works on a fresh clone.
-
-It is also not the engine this runs on. Production is **MariaDB 10.11**, and
-SQLite agrees with it on nothing it is not forced to — these migrations declare
-28 `enum` and 10 `json` columns, and on SQLite an `enum` is a `varchar` that
-accepts any string, so a test asserting the database rejects bad data passes
-there while proving nothing. To run the same 111 tests against real MySQL:
+That needs no database server, so it works on a fresh clone. It is not the
+engine this runs on: production is PostgreSQL (on Neon), and CI runs the same
+suite against a PostgreSQL 16 service, where all 130 run. To do that locally,
+export the `DB_*` variables for a throwaway database:
 
 ```bash
-cp .env.testing.example .env.testing      # defaults match the local devstack
-php artisan key:generate --env=testing
-php artisan test -c phpunit.mysql.xml
+DB_CONNECTION=pgsql DB_HOST=127.0.0.1 DB_PORT=5432 DB_DATABASE=edu_test \
+DB_USERNAME=postgres DB_PASSWORD=postgres php artisan test
 ```
 
-Two things about that which are easy to get wrong, both found by being caught
-by them:
-
-- **The `-c` is not optional.** PHPUnit applies its `<env>` entries before
-  Laravel boots, and Laravel's dotenv will not overwrite a variable that
-  already exists, so `phpunit.xml`'s `DB_CONNECTION=sqlite` beats anything in
-  `.env.testing`. Without `-c phpunit.mysql.xml` the suite stays on SQLite —
-  green, fast, and testing the wrong thing. `phpunit.mysql.xml` is
-  `phpunit.xml` with those keys left out so `.env.testing` can decide.
-- **`.env.testing` replaces `.env`, it does not layer on top.** Laravel loads
-  one or the other. A `.env.testing` holding only the `DB_*` lines unsets
-  everything else: 88 of the 111 tests then fail on a missing `APP_KEY`. Hence
-  the full copy and the `key:generate --env=testing`.
-
-CI runs both engines, and the `db-mysql` job fails if `edu_test` comes back
-empty — that being the only way it could go green while running on SQLite.
-
-> `.env.testing` points at a **throwaway** database; the suite migrates it from
-> scratch on every run.
+Export them; don't put them in `.env.testing`. `phpunit.xml` sets
+`DB_CONNECTION` and `DB_DATABASE` before Laravel reads any file, so only real
+environment variables override them. The suite drops every table in that
+database, and refuses to start against anything but a local server.
+[`TESTING.md`](TESTING.md) has the details and
+[`TEST_SPEC.md`](TEST_SPEC.md) the full test specification.
 
 ## Deploying
 
@@ -103,9 +85,10 @@ See [`DEPLOYMENT.md`](DEPLOYMENT.md).
 ## Docs index
 
 - [`SETUP.md`](SETUP.md) — local development setup
-- [`DEPLOYMENT.md`](DEPLOYMENT.md) — deployment steps (PHP app on Hostinger + a managed PostgreSQL database)
+- [`DEPLOYMENT.md`](DEPLOYMENT.md) — deployment steps (PHP app on Hostinger, database on Neon)
 - [`DATABASE.md`](DATABASE.md) — schema overview and PostgreSQL notes
 - [`SECURITY_PRIVACY.md`](SECURITY_PRIVACY.md) — identity-separation design, what's hardened vs. not yet
 - [`TESTING.md`](TESTING.md) — how to run the test suite, what's covered
+- [`TEST_SPEC.md`](TEST_SPEC.md) — the test specification the testing agent follows
 - [`TEST_ACCOUNTS.md`](TEST_ACCOUNTS.md) — demo login credentials (synthetic data only)
 - [`ROADMAP.md`](ROADMAP.md) — what's deferred to later phases, and why

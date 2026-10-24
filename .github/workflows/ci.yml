@@ -51,26 +51,25 @@ jobs:
           coverage: none
 
       - name: Install PHP dependencies
-        run: composer install --no-interaction --prefer-dist --no-progress
+        run: |
+          composer validate --no-check-publish
+          composer install --no-interaction --prefer-dist --no-progress
 
       - name: Prepare environment
         run: |
           cp .env.example .env
           php artisan key:generate
 
-      # Smoke-checks every migration and seeder against PostgreSQL.
-      - name: Migrate and seed (PostgreSQL)
-        run: php artisan migrate:fresh --seed --force
-        env:
-          BCRYPT_ROUNDS: 4
-
+      # Runs first, on the still-empty edu_test, so the check below means
+      # something.
       - name: Tests (PostgreSQL)
         run: php artisan test
 
       # The step above would pass just as happily on SQLite if the DB_* env
       # ever stopped reaching the suite (phpunit.xml's <env> entries are not
       # forced, so real environment variables win). Check the service itself:
-      # an empty edu_test means the suite never touched it.
+      # nothing else has touched edu_test yet, so an empty one means the
+      # suite never did either.
       - name: Check the suite really used PostgreSQL
         env:
           PGPASSWORD: postgres
@@ -84,8 +83,21 @@ jobs:
             exit 1
           }
 
-      # Hostinger has no Node.js, so public/build/ is committed and deployed as-is.
-      # This only checks that the frontend still builds.
+      # Smoke-checks every migration and seeder against PostgreSQL, configured
+      # the way a Neon server is: DB_URL for the app, DB_URL_UNPOOLED for
+      # migrations. CI has no pooler, so both point at the service, but it
+      # exercises the URL parsing and the direct-connection route. CI never
+      # connects to Neon.
+      - name: Migrate and seed (PostgreSQL, Neon-style URLs)
+        run: php artisan migrate:fresh --seed --force
+        env:
+          BCRYPT_ROUNDS: 4
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:5432/edu_test
+          DB_URL_UNPOOLED: postgresql://postgres:postgres@127.0.0.1:5432/edu_test
+
+      # Hostinger has no Node.js, so public/build/ is committed and deployed
+      # as-is. Check that the frontend builds and that the committed build is
+      # what the current source produces (a stale one ships unstyled pages).
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -96,3 +108,11 @@ jobs:
           npm ci
           npm run build
 
+      - name: Check the committed public/build is current
+        run: |
+          changes=$(git status --porcelain -- public/build)
+          [ -z "$changes" ] || {
+            echo "$changes"
+            echo "::error::public/build is out of date - run npm run build and commit public/build"
+            exit 1
+          }

@@ -27,7 +27,9 @@ must never regress. Where this file and the spec disagree, the spec wins.
 
 ## Procedure
 
-1. **Scope.** `git status` and `git diff origin/main...HEAD --stat` plus
+1. **Scope.** `git status` and `git diff origin/staging...HEAD --stat` (this
+   repository merges feature branches into `staging`, then `staging` into
+   `main`, the live site) plus
    uncommitted changes: list what changed, and map each file to the spec's
    areas so you know which critical regressions it can reach.
 2. **Environment.** Set up exactly as the spec's *Environment* section says:
@@ -46,7 +48,8 @@ must never regress. Where this file and the spec disagree, the spec wins.
    - *product defect* — the code is wrong;
    - *test defect* — the test is wrong (needs evidence, see Hard rules);
    - *environment* — setup, missing service, missing tool;
-   - *pre-existing* — also fails on `origin/main`. Check this in a
+   - *pre-existing* — also fails on `origin/staging` (say whether
+     `origin/main`, the live site, has it too). Check this in a
      separate `git worktree` so your working tree is untouched.
 
    Give each a severity: **S1** data loss, security, or the app does not

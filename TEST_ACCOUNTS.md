@@ -18,7 +18,7 @@ This is a test environment. All accounts and data are fabricated — do not reus
 | District Officer (Mysuru) | `district.mys@test.agtci.com` | Full working dashboard |
 | District Officer (New Delhi) | `district.ndl@test.agtci.com` | Full working dashboard |
 | School Admin (demo school) | `school.admin@test.agtci.com` | Full working dashboard, linked to the first seeded school |
-| Parent (demo) | `parent@test.agtci.com` | Full working dashboard, verified at the same demo school, has an existing complaint |
+| Parent (demo) | `parent@test.agtci.com` | Full working dashboard, verified at the same demo school. The seeder hands its 100 complaints to random verified parents and students, so this account may have none — submit one to try the flow |
 | Student (demo) | `student@test.agtci.com` | Full working dashboard |
 | Teacher (demo) | `teacher@test.agtci.com` | Full working dashboard with a seeded Teacher Effectiveness Index score |
 

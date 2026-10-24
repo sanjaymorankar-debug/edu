@@ -1,6 +1,8 @@
 <?php
 
+use Illuminate\Support\ConfigurationUrlParser;
 use Illuminate\Support\Str;
+use Pdo\Pgsql;
 
 return [
 
@@ -55,11 +57,37 @@ return [
             'database' => env('DB_DATABASE', 'laravel'),
             'username' => env('DB_USERNAME', 'root'),
             'password' => env('DB_PASSWORD', ''),
+            // Sent as the client_encoding startup parameter, which a pooler
+            // keeps per client, not as a SET.
             'charset' => env('DB_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,
-            'search_path' => 'public',
+            // Deliberately no 'search_path', 'timezone', 'isolation_level' or
+            // 'synchronous_commit': Laravel applies each with a session-level
+            // SET after connecting, and behind Neon's transaction-mode pooler
+            // that SET lands on whichever server connection ran it, not on the
+            // ones later queries get. The server default search_path
+            // ("$user", public) resolves to public for this app's role.
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            // Each query goes out as one unnamed statement, its parameters
+            // still sent separately. PHP 8.3's pdo_pgsql otherwise uses named
+            // prepared statements and frees them with an SQL DEALLOCATE that a
+            // pooler cannot track; inside a transaction that error aborts the
+            // transaction. Explicit EMULATE_PREPARES => false keeps Laravel's
+            // pooled mode (below) from switching to client-side emulation.
+            'options' => extension_loaded('pdo_pgsql') ? [
+                (PHP_VERSION_ID >= 80500 ? Pgsql::ATTR_DISABLE_PREPARES : PDO::PGSQL_ATTR_DISABLE_PREPARES) => true,
+                PDO::ATTR_EMULATE_PREPARES => false,
+            ] : [],
+
+            // On Neon, DB_URL is the pooled connection string and
+            // DB_URL_UNPOOLED the direct one. When DB_URL_UNPOOLED is set,
+            // Laravel's pooler support sends migrate, migrate:fresh and
+            // db:wipe over it; everything else uses DB_URL. Unset, everything
+            // uses DB_URL (or the DB_* values above).
+            'direct' => (new ConfigurationUrlParser)->parseConfiguration([
+                'url' => env('DB_URL_UNPOOLED'),
+            ]),
         ],
 
     ],

@@ -17,6 +17,8 @@ npm install
 npm run build
 ```
 
+`.env.example` is written for the server (`APP_ENV=production`, `APP_DEBUG=false`); for local work set `APP_ENV=local` and `APP_DEBUG=true` in `.env`. Leave `DB_URL` and `DB_URL_UNPOOLED` blank locally — they are the Neon connection strings on the server (see `DEPLOYMENT.md`).
+
 Create a database and point `.env` at it (`.env.example` already has PostgreSQL defaults):
 
 ```bash
