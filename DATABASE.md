@@ -1,6 +1,6 @@
 # Database
 
-MySQL in production (Hostinger), SQLite for local dev. 40 tables (see `database/migrations/`).
+PostgreSQL 16 in every environment (local dev, CI, and on Neon for the live site — see [`DEPLOYMENT.md`](DEPLOYMENT.md#database-neon--read-this-first)). SQLite is used only for the zero-setup in-memory test run (`phpunit.xml`); CI runs the same suite against PostgreSQL. 41 migrations, ~50 tables (see `database/migrations/`).
 
 ## Core groups
 
@@ -39,6 +39,38 @@ MySQL in production (Hostinger), SQLite for local dev. 40 tables (see `database/
 ## Indexes
 
 Search-relevant columns on `schools` (name, pincode, board, state/district), `complaints` (status, school_id+status, district_id+status, anonymous_ref), and `school_quality_scores` (school_id+calculated_at) are indexed. Nothing here is tuned for the 100k+-school scale the full spec envisions — see `ROADMAP.md` for aggregation-table/caching work that's deferred.
+
+## PostgreSQL notes
+
+The schema was originally written for MySQL; these are the places where PostgreSQL behaves differently and what the app does about it:
+
+- **Case-sensitive text comparison.** MySQL's `utf8mb4_unicode_ci` collation made `=` and `LIKE` case-insensitive; PostgreSQL does not. `users.email` is therefore a `citext` column on PostgreSQL (migration `2026_10_09_000000_make_user_email_case_insensitive_on_pgsql`, which runs `CREATE EXTENSION IF NOT EXISTS citext`), so login, password reset, `unique:users,email` and the admin email lookup still match regardless of case, and the unique index still rejects `Alice@x.com` next to `alice@x.com`. User-facing search uses `whereLike()`, which compiles to `ILIKE`. New code that searches free text should use `whereLike()` / `orWhereLike()`, not `where(..., 'like', ...)`. Machine-generated values (statuses, slugs, tokens, `anonymous_ref`, complaint numbers) are always written in one case, so their exact comparisons are unaffected.
+- **`enum()` columns** become `varchar` + a `CHECK` constraint (Laravel's pgsql grammar), so invalid values are still rejected at the database level.
+- **`unsigned*()` columns** have no unsigned equivalent: `unsignedInteger` is a signed `integer`, `unsignedSmallInteger` a `smallint`, `unsignedBigInteger` a `bigint`. Nothing stored here approaches those limits, but negative values are not rejected by the database — validate them in the app.
+- **`json()` columns** are PostgreSQL `json`. `json` has no equality operator, so don't use `DISTINCT`, `GROUP BY`, or `=` on these columns (nothing currently does).
+- **Booleans** are real `boolean`s; every boolean column has a `'boolean'` cast on its model, so PHP sees `true`/`false` on both drivers.
+- **Grouping:** PostgreSQL requires every selected non-aggregate column to be in `GROUP BY` (the queries in `RecalculateAnalyticsSnapshots` already comply).
+- **Transactions:** after any error inside a PostgreSQL transaction, every further statement in it fails until rollback — don't catch-and-continue on a `QueryException` inside `DB::transaction()`, unless the failing statement ran in its own nested `DB::transaction()` (a savepoint), as `Complaint::createNumbered()` does when it retries a taken complaint number.
+
+## Neon: pooled and direct connections
+
+`DB_URL` is Neon's pooled endpoint (PgBouncer in transaction mode), `DB_URL_UNPOOLED` the direct one. The `pgsql` connection in `config/database.php`:
+
+- sends every query as one **unnamed statement** (`PGSQL_ATTR_DISABLE_PREPARES`), parameters still separate from the SQL. PHP 8.3's PostgreSQL driver otherwise uses named prepared statements and removes them with an SQL `DEALLOCATE`, which the pooler does not track: inside a transaction that fails and aborts the transaction (measured against PgBouncer 1.22);
+- sets nothing per session on connect: the client encoding goes in the startup packet, and there is no `search_path`, time zone or isolation `SET` (a pooler applies a session `SET` to one server connection only). The server's default `search_path` (`"$user", public`) resolves to `public`;
+- gets a `direct` endpoint from `DB_URL_UNPOOLED` when it is set. Laravel then runs `migrate`, `migrate:fresh` and `db:wipe` over it; everything else, `db:seed` included, uses `DB_URL`. Unset, everything uses `DB_URL` (or the `DB_*` values), which is right for a local or CI database.
+
+`sslmode` and `channel_binding` from the URL both reach libpq. The pooled endpoint suspends with the compute when idle; each PHP request opens its own connection, so nothing holds one across a suspend. Complaint numbering takes a transaction-scoped advisory lock (`pg_advisory_xact_lock`), which is safe on the pooler; a session-level `pg_advisory_lock` would not be.
+
+## Backups
+
+```bash
+pg_dump --format=custom --no-owner "$DB_URL_UNPOOLED" -f backup-$(date +%Y%m%d-%H%M%S).dump
+# restore into an empty database:
+pg_restore --no-owner -d "$DB_URL_UNPOOLED" backup-....dump
+```
+
+Use the direct URL (or `-h/-U/-d` for a local database), and a `pg_dump` client whose major version is the same as or newer than the server's. Neon also keeps a history of each branch and can restore it to a point in time (console → Restore).
 
 ## Migrating on the live server
 

@@ -112,6 +112,40 @@ class TwoFactorAuthTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_two_factor_challenge_locks_out_after_five_wrong_codes(): void
+    {
+        $officer = $this->makeOfficer();
+        $secret = (new Google2FA())->generateSecretKey();
+        TwoFactorAuthentication::create([
+            'user_id' => $officer->id, 'secret' => $secret, 'confirmed_at' => now(),
+            'recovery_codes' => ['AAAA-BBBB'],
+        ]);
+
+        $this->withSession(['2fa_user_id' => $officer->id, '2fa_remember' => false]);
+
+        $component = Volt::test('pages.auth.two-factor-challenge');
+
+        // A six-digit code has only a million values: without a limit, the
+        // password alone is enough to guess one.
+        foreach (range(1, 5) as $attempt) {
+            $component->set('code', 'WRONG-'.$attempt)->call('verify')->assertHasErrors('code');
+        }
+
+        // The sixth attempt is refused even with the right code, and so is a
+        // recovery code; the account stays logged out.
+        $component->set('code', (new Google2FA())->getCurrentOtp($secret))
+            ->call('verify')
+            ->assertHasErrors('code')
+            ->assertSee('Too many');
+
+        $component->set('useRecoveryCode', true)->set('code', 'AAAA-BBBB')
+            ->call('verify')
+            ->assertHasErrors('code');
+
+        $this->assertGuest();
+        $this->assertContains('AAAA-BBBB', TwoFactorAuthentication::where('user_id', $officer->id)->first()->recovery_codes);
+    }
+
     public function test_recovery_code_can_be_used_once(): void
     {
         $officer = $this->makeOfficer();

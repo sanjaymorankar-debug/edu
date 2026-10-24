@@ -37,7 +37,7 @@ Covered by `tests/Feature/Platform/RbacBoundaryTest.php`: cross-school access, c
 
 ## 2FA
 
-TOTP-based (`pragmarx/google2fa`), available to School Admin and all four government-officer roles from Profile → "Two-Factor Authentication". Setup shows a manual-entry secret key (no QR code library) and, on confirmation, 8 single-use recovery codes shown once. Login checks `two_factor_authentications.confirmed_at`; if set, the password check succeeds but the session is **not** authenticated yet — `Auth::login()` only happens after a separate TOTP/recovery-code challenge (`/two-factor-challenge`) passes. Not yet mandatory for any role — an officer can choose not to enable it.
+TOTP-based (`pragmarx/google2fa`), available to School Admin and all four government-officer roles from Profile → "Two-Factor Authentication". Setup shows a manual-entry secret key (no QR code library) and, on confirmation, 8 single-use recovery codes shown once. Login checks `two_factor_authentications.confirmed_at`; if set, the password check succeeds but the session is **not** authenticated yet — `Auth::login()` only happens after a separate TOTP/recovery-code challenge (`/two-factor-challenge`) passes. The challenge allows 5 wrong codes per account per minute, then refuses every code (even a right one) until the minute is up — the password step's throttle is cleared once the password is right, so without this a six-digit code could be guessed. Not yet mandatory for any role — an officer can choose not to enable it.
 
 ## Anti-manipulation / fraud flagging
 

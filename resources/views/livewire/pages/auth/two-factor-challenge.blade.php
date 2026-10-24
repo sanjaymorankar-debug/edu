@@ -2,7 +2,9 @@
 
 use App\Models\TwoFactorAuthentication;
 use App\Models\User;
+use Illuminate\Auth\Events\Lockout;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Session;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -28,6 +30,23 @@ new #[Layout('layouts.guest')] class extends Component
 
         $this->validate(['code' => ['required', 'string']]);
 
+        // Five tries a minute per account, whichever session or IP they come
+        // from: a six-digit code is guessable without a limit, and the
+        // password step's own throttle is cleared once the password is right.
+        $throttleKey = 'two-factor-challenge:'.$user->id;
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            event(new Lockout(request()));
+
+            $seconds = RateLimiter::availableIn($throttleKey);
+            $this->addError('code', trans('auth.throttle', [
+                'seconds' => $seconds,
+                'minutes' => ceil($seconds / 60),
+            ]));
+
+            return;
+        }
+
         $verified = false;
 
         if ($this->useRecoveryCode) {
@@ -41,11 +60,13 @@ new #[Layout('layouts.guest')] class extends Component
         }
 
         if (! $verified) {
+            RateLimiter::hit($throttleKey);
             $this->addError('code', 'That code is not valid.');
 
             return;
         }
 
+        RateLimiter::clear($throttleKey);
         Auth::login($user, session('2fa_remember', false));
         session()->forget(['2fa_user_id', '2fa_remember']);
         Session::regenerate();
