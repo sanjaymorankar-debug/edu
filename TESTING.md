@@ -4,7 +4,21 @@
 php artisan test
 ```
 
-111 tests, all passing as of this build (Pest/PHPUnit via Laravel's test runner).
+116 tests (PHPUnit via Laravel's test runner). With no extra configuration this runs against in-memory SQLite (`phpunit.xml`), so it needs no database server; 3 PostgreSQL-specific tests are skipped there.
+
+### Against PostgreSQL (what CI runs)
+
+PostgreSQL is the production database, so run the suite against it before merging anything that touches queries or migrations. Create an empty database once, then export the `DB_*` variables (they take precedence over `phpunit.xml`'s SQLite defaults):
+
+```bash
+createdb -h 127.0.0.1 -U postgres edu_test
+
+DB_CONNECTION=pgsql DB_HOST=127.0.0.1 DB_PORT=5432 \
+DB_DATABASE=edu_test DB_USERNAME=postgres DB_PASSWORD=postgres \
+php artisan test
+```
+
+All 116 pass on PostgreSQL 16. Tests use `RefreshDatabase`, which drops and recreates every table in that database — never point it at a database you care about. CI (`.github/workflows/ci.yml`) runs exactly this against a `postgres:16` service container, after a `migrate:fresh --seed` smoke run of every migration and seeder.
 
 ## What's covered
 
@@ -18,6 +32,7 @@ php artisan test
 - **Two-factor auth** (`tests/Feature/Platform/TwoFactorAuthTest.php`): setup + confirm with a valid TOTP generates 8 recovery codes; confirming with a wrong code fails and leaves 2FA unconfirmed; login redirects to the challenge screen when 2FA is enabled without authenticating yet; the challenge completes login with a valid TOTP code, rejects an invalid one, and a recovery code works exactly once
 - **Admin panel additions** (`tests/Feature/Platform/AdminPanelTest.php`): System Admin can review (dismiss) a fraud flag with reviewer/timestamp recorded, update moderation thresholds (persisted via the `Setting` model), toggle a role's permission, and assign/remove a role from a user found by email
 - **Teacher Effectiveness value-add** (`tests/Feature/Platform/TeacherEffectivenessTest.php`): a teacher with a subject specialization and two `student_academic_records` showing improvement gets a `value_add` component in `component_breakdown`; a teacher with no subject specialization gets none
+- **PostgreSQL compatibility** (`tests/Feature/Platform/DatabaseCompatibilityTest.php`): school search on the public directory and the onboarding picker is case-insensitive; on PostgreSQL, login, the `unique:users,email` rule and the admin user-by-email lookup match emails regardless of case (the `citext` column — see `DATABASE.md`), as they did on MySQL
 - **Fraud-flag auto-creation** (`tests/Feature/Platform/SchoolFeedbackTest.php`): a burst of 5 feedback submissions for the same school within the default window creates exactly one open `feedback_spike` flag
 
 ## Manual browser verification (done for this build)
