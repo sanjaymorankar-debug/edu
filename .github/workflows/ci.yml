@@ -15,8 +15,12 @@ jobs:
 
     services:
       postgres:
-        # AWS public mirror of the Docker Official postgres image — avoids Docker Hub's anonymous pull rate limit.
-        image: public.ecr.aws/docker/library/postgres:16
+        # Docker Hub's official image, the one bkesari-platform's CI uses. This
+        # was public.ecr.aws/docker/library/postgres:16 to dodge Docker Hub's
+        # anonymous rate limit, until ECR Public refused every pull with "Data
+        # limit exceeded" (2026-10-24). If Docker Hub's limit bites again,
+        # mirror.gcr.io/library/postgres:16 is the next mirror to try.
+        image: postgres:16
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
